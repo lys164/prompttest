@@ -120,6 +120,26 @@ router.post('/sessions', async (req: Request, res: Response) => {
             }
         }
 
+        // 缓存每个映射对应的 AI 角色信息，避免后续重复读取导致数据缺失
+        characterMappings = await Promise.all(
+            characterMappings.map(async (mapping: CharacterMapping, index: number) => {
+                try {
+                    const userAICharacter = await userService.getUserAICharacter(userId, mapping.userAICharacterId);
+                    if (!userAICharacter) {
+                        console.warn(`⚠️ 未找到用户 ${userId} 的 AI 角色 ${mapping.userAICharacterId}`);
+                    }
+                    return {
+                        ...mapping,
+                        userAICharacterName: mapping.userAICharacterName || userAICharacter?.姓名 || `AI角色${index + 1}`,
+                        userAICharacter,
+                    };
+                } catch (err) {
+                    console.warn(`⚠️ 获取 AI 角色 ${mapping.userAICharacterId} 失败:`, err);
+                    return mapping;
+                }
+            })
+        );
+
         // 创建会话
         const session: GameSession = {
             id: uuidv4(),
@@ -337,10 +357,20 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
         // 构建参与的角色信息
         const participatingCharacters = await Promise.all(
             session.characterMappings.map(async (mapping) => {
-                const userAIChar = await userService.getUserAICharacter(
-                    session.userId,
-                    mapping.userAICharacterId
-                );
+                let userAIChar = mapping.userAICharacter;
+
+                if (!userAIChar) {
+                    userAIChar = await userService.getUserAICharacter(
+                        session.userId,
+                        mapping.userAICharacterId
+                    );
+
+                    if (userAIChar) {
+                        mapping.userAICharacter = userAIChar;
+                    } else {
+                        console.warn(`⚠️ 找不到用户AI角色 ${mapping.userAICharacterId}，使用映射信息作为占位`);
+                    }
+                }
 
                 // 查找脚本角色 - 首先尝试精确匹配 roleId，否则使用第一个角色
                 let scriptChar = script.角色池.find((c) => c.roleId === mapping.scriptRoleId);
@@ -362,7 +392,10 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
 
                 return {
                     userAICharacterId: mapping.userAICharacterId,
-                    userAICharacter: userAIChar || ({ 姓名: '未知角色' } as any),
+                    userAICharacter: userAIChar || ({
+                        id: mapping.userAICharacterId,
+                        姓名: mapping.userAICharacterName || '未知角色',
+                    } as any),
                     scriptRoleId: mapping.scriptRoleId,
                     scriptCharacter: scriptChar || ({ 姓名: '角色', 角色简介: '剧本角色' } as any),
                     roleDetail: charDetail || ({ 角色简介: '角色描述', 角色视角的故事背景: '故事背景' } as any),

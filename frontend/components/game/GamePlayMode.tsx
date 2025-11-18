@@ -224,10 +224,26 @@ export default function GamePlayMode({
         return result;
     };
 
-    const handleChoice = async (choiceId: string) => {
+    const handleChoice = async (choice: any) => {
         try {
             setLoading(true);
-            const response = await gameApi.submitChoice(sessionId, choiceId, userInput);
+            let payloadChoiceId: string;
+            let payloadUserInput: string | undefined;
+
+            if (choice === 'custom') {
+                payloadChoiceId = 'custom';
+                payloadUserInput = userInput.trim();
+            } else {
+                const choiceData = typeof choice === 'string' ? { id: choice } : choice;
+                payloadChoiceId = choiceData.id || choiceData.choiceId || choiceData.value || choiceData;
+                const choiceText = choiceData.文本 || choiceData.text || choiceData.label || choiceData.description;
+                payloadUserInput = choiceText || `选择了选项: ${payloadChoiceId}`;
+            }
+
+            const response = await gameApi.submitChoice(sessionId, {
+                choiceId: payloadChoiceId,
+                userInput: payloadUserInput,
+            });
 
             // 更新叙述
             setNarrative(response.data.narrative);
@@ -497,7 +513,7 @@ export default function GamePlayMode({
                                     transition={{ delay: index * 0.1 }}
                                     whileHover={{ scale: 1.02, x: 10 }}
                                     whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleChoice(choice.id)}
+                                    onClick={() => handleChoice(choice)}
                                     disabled={loading}
                                     className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 border-2 border-blue-700 hover:border-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >

@@ -97,6 +97,8 @@ export interface CharacterMapping {
     scriptRoleId: string;         // 剧本中的角色ID
     scriptCharacterName: string;  // 剧本角色名称
     userAICharacterName: string;  // 用户AI角色的名称
+    userAICharacter?: UserAICharacter; // 缓存的AI角色完整信息
+    isVariableMapping?: boolean;  // 是否来自变量映射
 }
 
 // ===== 游戏会话相关类型 =====
