@@ -551,11 +551,8 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
         }
 
         replacements['用户选择的选项的具体内容'] = normalizedUserChoice;
-        replacements['历史重要情节'] = session.dialogueHistory
-            .filter((entry: any) => entry.type === 'ai-response')
-            .map((entry: any) => entry.content)
-            .slice(-3)  // 只取最后3条
-            .join('\n') || '故事刚刚开始';
+        // 暂时不填充"已发生的关键剧情"，保持为默认提示
+        replacements['历史重要情节'] = '故事刚刚开始';
 
         // 替换 system prompt 模板中的变量
         let customSystemPrompt = scriptService.replacePromptTemplate(systemPromptTemplate, replacements);
