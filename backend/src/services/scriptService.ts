@@ -357,10 +357,11 @@ export class ScriptService {
                 }
             }
 
+            const fallbackRoleId = 'player-role-0';
             rolePoolData = [{
-                id: 'role-' + doc.id,
-                roleId: 'role-' + doc.id,
-                姓名: '主角', // 默认名称
+                id: fallbackRoleId,
+                roleId: fallbackRoleId,
+                姓名: data.主角名称 || '主角', // 默认名称，可根据需要扩展
                 角色简介: '故事的主角',
                 角色目标: '',
                 角色视角的故事背景: data.角色视角的故事背景 || '',
@@ -375,8 +376,9 @@ export class ScriptService {
         // 如果没有角色详细设定，也将文档本身作为一个详细设定使用
         if (!roleDetailsData || roleDetailsData.length === 0) {
             console.log('  ⚠️ 没有找到角色详细设定，使用文档本身作为角色详细设定');
+            const fallbackRoleId = 'player-role-0';
             roleDetailsData = [{
-                roleId: 'role-' + doc.id,
+                roleId: fallbackRoleId,
                 角色简介: '故事的主角',
                 角色目标: '',
                 角色视角的故事背景: data.角色视角的故事背景 || '',
