@@ -287,14 +287,14 @@ export class ScriptService {
         console.log(`📖 从 Firebase 读取所有剧本`);
 
         // 从 Firebase 读取
-        const snapshot = await db.collection('livestory-story').get();
+            const snapshot = await db.collection('livestory-story').get();
 
-        if (!snapshot.empty) {
-            console.log(`📖 从 Firebase 读取 ${snapshot.size} 个剧本`);
+            if (!snapshot.empty) {
+                console.log(`📖 从 Firebase 读取 ${snapshot.size} 个剧本`);
             const scripts = this.mapFirebaseScripts(snapshot);
             console.log(`✅ 成功映射 ${scripts.length} 个剧本`);
             return scripts;
-        } else {
+            } else {
             console.warn('⚠️  Firebase 中没有剧本数据');
             return [];
         }
@@ -307,15 +307,15 @@ export class ScriptService {
         console.log(`📖 从 Firebase 按类别 ${category} 读取剧本`);
 
         // 从 Firebase 读取
-        const snapshot = await db
-            .collection('livestory-story')
-            .where('剧本类别', '==', category)
-            .get();
+            const snapshot = await db
+                .collection('livestory-story')
+                .where('剧本类别', '==', category)
+                .get();
 
-        if (!snapshot.empty) {
-            console.log(`📖 从 Firebase 按类别 ${category} 读取 ${snapshot.size} 个剧本`);
-            return this.mapFirebaseScripts(snapshot);
-        } else {
+            if (!snapshot.empty) {
+                console.log(`📖 从 Firebase 按类别 ${category} 读取 ${snapshot.size} 个剧本`);
+                return this.mapFirebaseScripts(snapshot);
+            } else {
             console.warn(`⚠️  Firebase 中没有 ${category} 类别的剧本`);
             return [];
         }
@@ -328,12 +328,12 @@ export class ScriptService {
         console.log(`🔍 [getScriptById] 正在查询剧本: ${scriptId}`);
 
         // 从 Firebase 读取
-        const doc = await db.collection('livestory-story').doc(scriptId).get();
+            const doc = await db.collection('livestory-story').doc(scriptId).get();
 
-        if (doc.exists) {
+            if (doc.exists) {
             console.log(`✅ [getScriptById] 找到剧本 ${scriptId}`);
-            return this.mapFirebaseScript(doc);
-        } else {
+                return this.mapFirebaseScript(doc);
+            } else {
             console.error(`❌ [getScriptById] Firebase 中找不到剧本 ${scriptId}`);
             return undefined;
         }
@@ -360,6 +360,38 @@ export class ScriptService {
 
         // 🔍 获取角色数据 - 优先从角色网络.节点获取，否则从角色池获取
         let rolePoolData = data.角色池 || data.角色网络?.节点 || [];
+
+        // ✨ 检测剧本中是否使用了角色变量（如 {{角色A}}, {{角色B}}）
+        const scriptText = JSON.stringify(data);
+        const characterVariables = this.detectCharacterVariables(scriptText);
+
+        // 如果检测到角色变量，为每个变量创建一个虚拟角色池条目
+        if (characterVariables.length > 0) {
+            console.log(`  🎭 检测到角色变量: ${characterVariables.join(', ')}`);
+            
+            // 确保 rolePoolData 是数组
+            if (!Array.isArray(rolePoolData)) {
+                rolePoolData = [];
+            }
+            
+            // 为每个变量生成角色条目（如果 rolePoolData 里还没有）
+            characterVariables.forEach((varName) => {
+                const existingRole = rolePoolData.find((r: any) => r.roleId === varName || r.姓名 === varName);
+                if (!existingRole) {
+                    console.log(`  ➕ 为变量 ${varName} 创建角色条目`);
+                    rolePoolData.push({
+                        id: varName,
+                        roleId: varName,  // 关键：roleId 直接用变量名
+                        姓名: varName,
+                        角色简介: `剧本中的 ${varName} 变量角色`,
+                        角色目标: '',
+                        角色视角的故事背景: data.角色视角的故事背景 || '',
+                        第一个选择点: data.第一个选择点 || '',
+                        预置策略选项: Array.isArray(data.预置策略选项) ? data.预置策略选项 : [],
+                    });
+                }
+            });
+        }
 
         // 如果没有角色池数据，则将文档本身作为一个角色使用（针对单角色结构）
         if (!rolePoolData || rolePoolData.length === 0) {
@@ -397,7 +429,7 @@ export class ScriptService {
                 console.log('  ⚠️ 没有找到角色详细设定，基于角色池构造默认设定');
                 roleDetailsData = rolePoolData.map((char: any, index: number) => {
                     const derivedRoleId = char.roleId || char.id || `role-${doc.id}-${index}`;
-                    return {
+        return {
                         roleId: derivedRoleId,
                         角色简介: char.角色简介 || '故事的主角',
                         角色目标: char.角色目标 || '',
@@ -516,10 +548,10 @@ export class ScriptService {
 
             return {
                 roleId: detail.roleId || detail.id || `role-${timestamp}-${index}`,
-                角色简介: detail.角色简介,
-                角色目标: detail.角色目标,
-                角色视角的故事背景: detail.角色视角的故事背景,
-                第一个选择点: detail.第一个选择点,
+            角色简介: detail.角色简介,
+            角色目标: detail.角色目标,
+            角色视角的故事背景: detail.角色视角的故事背景,
+            第一个选择点: detail.第一个选择点,
                 预置策略选项: (Array.isArray(optionsArray) ? optionsArray : []).map((opt: any, optIndex: number) => {
                     // 处理两种格式：
                     // 1. 对象格式：{ 文本: '...', 后果描述: '...', ... }
@@ -536,7 +568,7 @@ export class ScriptService {
                             id: opt.id || `option-${timestamp}-${index}-${optIndex}`,
                             文本: opt.文本 || opt.text || `选项 ${optIndex + 1}`,
                             后果描述: opt.后果描述 || opt.consequence || '',
-                            推荐AI特征: opt.推荐AI特征 || [],
+                推荐AI特征: opt.推荐AI特征 || [],
                         };
                     }
                     return {
