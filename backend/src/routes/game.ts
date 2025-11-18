@@ -360,19 +360,24 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
         // 构建参与的角色信息
         const participatingCharacters = await Promise.all(
             session.characterMappings.map(async (mapping) => {
+                console.log(`🔍 [choose] 开始构建角色 - scriptRoleId: ${mapping.scriptRoleId}, characterId: ${mapping.userAICharacterId}`);
                 let userAIChar = mapping.userAICharacter;
 
                 if (!userAIChar) {
+                    console.log(`⚠️ [choose] 缓存中没有 userAICharacter，尝试查询...`);
                     userAIChar = await userService.getUserAICharacter(
                     session.userId,
                     mapping.userAICharacterId
                 );
 
                     if (userAIChar) {
+                        console.log(`✅ [choose] 查询成功: ${userAIChar.姓名} (MBTI: ${userAIChar.MBTI}, 年龄: ${userAIChar.年龄})`);
                         mapping.userAICharacter = userAIChar;
                     } else {
-                        console.warn(`⚠️ 找不到用户AI角色 ${mapping.userAICharacterId}，使用映射信息作为占位`);
+                        console.warn(`❌ [choose] 找不到用户AI角色 ${mapping.userAICharacterId}，使用映射信息作为占位`);
                     }
+                } else {
+                    console.log(`✅ [choose] 使用缓存的 userAICharacter: ${userAIChar.姓名} (MBTI: ${userAIChar.MBTI || '未知'}, 年龄: ${userAIChar.年龄 || '未知'})`);
                 }
 
                 // 查找脚本角色 - 首先尝试精确匹配 roleId，否则使用第一个角色
