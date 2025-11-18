@@ -31,7 +31,7 @@ export class AIService {
                 return this.generateDemoResponse(request);
             }
 
-            const response = await this.callOpenRouter('openai/gpt-5.1-chat', [
+            const response = await this.callOpenRouter('openai/gpt-4-turbo', [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt },
             ], request.temperature || 0.7, request.maxTokens || 2000);
@@ -44,7 +44,7 @@ export class AIService {
                 nextChoicePoint: parsed.nextChoicePoint,
                 newOptions: parsed.options,
                 characterResponses: parsed.characterResponses,
-                modelUsed: 'openai/gpt-5.1-chat',
+                modelUsed: 'openai/gpt-4-turbo',
                 generationTime,
             };
         } catch (error) {
@@ -302,7 +302,7 @@ ${characterDescriptions}
      */
     async debugPrompt(
         prompt: string,
-        model: string = 'openai/gpt-5.1-chat',
+        model: string = 'openai/gpt-4-turbo',
         temperature: number = 0.7
     ): Promise<DebugResponse> {
         const startTime = Date.now();
@@ -340,7 +340,7 @@ ${characterDescriptions}
     async compareModels(
         prompt: string,
         models: string[] = [
-            'openai/gpt-5.1-chat',
+            'openai/gpt-4-turbo',
             'anthropic/claude-haiku-4.5',
             'google/gemini-2.5-flash-preview-09-2025',
         ]
