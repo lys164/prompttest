@@ -254,19 +254,38 @@ export default function GamePlayMode({
                 userInput: payloadUserInput,
             });
 
-            // 更新叙述
-            setNarrative(response.data.narrative);
-            setChoices(response.data.choices);
+            console.log('📦 handleChoice 收到响应:', response);
 
-            // 更新对话历史
-            setDialogueHistory(response.data.dialogueHistory);
+            // 检查是否是异步生成模式
+            if (response?.status === 'generating') {
+                console.log('⏳ 异步生成中，等待 WebSocket 消息...');
+                // WebSocket 会处理后续更新，这里只需要保持 loading 状态
+                // loading 会在 handleStoryGenerated 中被设置为 false
+            } else if (response?.narrative) {
+                // 同步模式或兼容旧版本
+                console.log('📖 同步模式，直接更新界面');
+                setNarrative(response.narrative);
+                setChoices(response.options || response.choices || []);
+                
+                if (response.dialogueHistory) {
+                    setDialogueHistory(response.dialogueHistory);
+                }
+                
+                setLoading(false);
+            }
 
             // 清空用户输入
             setUserInput('');
             setShowCustomInput(false);
         } catch (error) {
             console.error('Failed to submit choice:', error);
-            alert('提交选择失败，请重试');
+            const errorMsg = error instanceof Error ? error.message : '提交选择失败，请重试';
+            setError(errorMsg);
+            setLoading(false);
+            // 3秒后清除错误
+            setTimeout(() => {
+                setError(null);
+            }, 3000);
         } finally {
             setLoading(false);
         }
