@@ -164,6 +164,7 @@ router.post('/sessions', async (req: Request, res: Response) => {
             // 为了替换变量，需要创建临时的 participatingCharacters 数组
             // 这里使用的是简化版本，只包含必要的信息
             const tempParticipatingCharacters = characterMappings.map((mapping: any) => ({
+                scriptRoleId: mapping.scriptRoleId,
                 userAICharacterName: mapping.userAICharacterName,
             }));
 
@@ -357,6 +358,7 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 return {
                     userAICharacterId: mapping.userAICharacterId,
                     userAICharacter: userAIChar || ({ 姓名: '未知角色' } as any),
+                    scriptRoleId: mapping.scriptRoleId,
                     scriptCharacter: scriptChar || ({ 姓名: '角色', 角色简介: '剧本角色' } as any),
                     roleDetail: charDetail || ({ 角色简介: '角色描述', 角色视角的故事背景: '故事背景' } as any),
                 };

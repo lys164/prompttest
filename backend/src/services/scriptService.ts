@@ -81,17 +81,35 @@ export class ScriptService {
      * @param characterMappings 角色映射信息，格式为 { roleId: { AI角色名 } }
      * @returns 替换后的文本
      */
-    replaceCharacterVariables(text: string, characterMappings: Array<{ userAICharacterName?: string; userAICharacter?: any }>): string {
+    replaceCharacterVariables(text: string, characterMappings: Array<{ scriptRoleId?: string; userAICharacterName?: string; userAICharacter?: any }>): string {
         if (!text || !characterMappings || characterMappings.length === 0) {
             return text;
         }
 
         let result = text;
 
-        // 替换所有 {{角色X}} 形式的变量
-        // 角色A、角色B 等对应到 characterMappings 中的第 0、1 个角色
         const characterLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
 
+        // 先按 scriptRoleId 精确替换（支持 {{角色A}}、{{角色B}} 等变量）
+        characterMappings.forEach((mapping, index) => {
+            const characterName = mapping.userAICharacterName ||
+                mapping.userAICharacter?.姓名 ||
+                `角色${index + 1}`;
+
+            if (mapping.scriptRoleId) {
+                const placeholderRegex = new RegExp(`{{${mapping.scriptRoleId}}}`, 'g');
+                result = result.replace(placeholderRegex, characterName);
+
+                const labelMatch = mapping.scriptRoleId.match(/^角色([A-Z])$/);
+                if (labelMatch) {
+                    const label = labelMatch[1];
+                    const labelRegex = new RegExp(`{{角色${label}}}`, 'g');
+                    result = result.replace(labelRegex, characterName);
+                }
+            }
+        });
+
+        // 兼容旧格式：根据顺序替换 {{角色A}}、{{角色B}} ...
         characterLabels.forEach((label, index) => {
             if (index < characterMappings.length) {
                 const mapping = characterMappings[index];
