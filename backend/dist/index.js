@@ -52,7 +52,21 @@ function broadcastToSession(sessionId, data) {
     }
 }
 // 中间件
-app.use((0, cors_1.default)());
+// CORS 配置
+app.use((0, cors_1.default)({
+    origin: [
+        'https://prompttest-steel.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:8080',
+        /\.vercel\.app$/, // 允许所有 Vercel 部署
+        /\.railway\.app$/, // 允许所有 Railway 部署
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // 24 小时
+}));
 app.use(express_1.default.json());
 // 路由
 app.use('/api/scripts', scripts_1.default);

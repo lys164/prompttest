@@ -60,3 +60,4 @@ serviceAccountKey.json
 # Optional eslint cache
 .eslintcache
 
+serviceAccountKey.json
