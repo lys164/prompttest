@@ -1,0 +1,786 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { gameApi } from '@/lib/api';
+import { wsClient } from '@/lib/websocket';
+import DialogueDisplay from './DialogueDisplay';
+import ChoiceButtons from './ChoiceButtons';
+
+interface GamePlayModeProps {
+    sessionId: string;
+    script: any;
+    characters: any[];
+    session: any;
+    onSessionUpdate: (session: any) => void;
+}
+
+export default function GamePlayMode({
+    sessionId,
+    script,
+    characters,
+    session,
+    onSessionUpdate,
+}: GamePlayModeProps) {
+    const [narrative, setNarrative] = useState<string>('');
+    const [choices, setChoices] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [dialogueHistory, setDialogueHistory] = useState<any[]>([]);
+    const [userInput, setUserInput] = useState('');
+    const [showCustomInput, setShowCustomInput] = useState(false);
+    const [gameStarted, setGameStarted] = useState(false);
+    const [userCharacterInfo, setUserCharacterInfo] = useState<any>(null);
+    const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedOption, setSelectedOption] = useState<any>(null);
+
+    // 调试面板相关 state
+    const [debugMode, setDebugMode] = useState(false);
+    const [systemPromptOverride, setSystemPromptOverride] = useState<string>('');
+    const [defaultSystemPrompt, setDefaultSystemPrompt] = useState<string>(''); // 存储 Firebase 的默认提示
+    const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-4-turbo');
+    const [isSystemPromptModified, setIsSystemPromptModified] = useState(false);
+
+    useEffect(() => {
+        // 初始化游戏场景
+        initializeGame();
+
+        // 连接 WebSocket
+        wsClient.connect(sessionId).catch(error => {
+            console.error('⚠️ WebSocket 连接失败:', error);
+        });
+
+        // 注册 WebSocket 消息处理器
+        wsClient.on('story_generated', handleStoryGenerated);
+        wsClient.on('story_error', handleStoryError);
+
+        // 清理：断开 WebSocket 连接
+        return () => {
+            wsClient.disconnect();
+        };
+    }, [sessionId]);
+
+    // 单独监听 script 变化，用于加载系统提示
+    useEffect(() => {
+        if (script?.id) {
+            loadSystemPrompt();
+        }
+    }, [script?.id]);
+
+    const loadSystemPrompt = async () => {
+        try {
+            // 从剧本信息确定提示类型
+            let promptType = 'single-single-sp'; // 默认值
+            if (script?.剧本类别) {
+                const scriptCat = script.剧本类别;
+                if (scriptCat.includes('【多人】') && scriptCat.includes('【多AI】')) {
+                    promptType = 'multi-multi-sp';
+                } else if (scriptCat.includes('【单人】') && scriptCat.includes('【多AI】')) {
+                    promptType = 'single-multi-sp';
+                }
+            }
+
+            console.log(`📝 确定的提示类型: ${promptType}`);
+
+            // 调用 API 获取系统提示，传递 scriptId
+            const promptRes = await gameApi.getSystemPrompt(sessionId, script?.id);
+            if (promptRes.data?.systemPrompt) {
+                setDefaultSystemPrompt(promptRes.data.systemPrompt);
+                setSystemPromptOverride(promptRes.data.systemPrompt);
+                console.log('✅ 系统提示加载成功');
+            }
+        } catch (promptError) {
+            console.warn('⚠️ 加载系统提示失败:', promptError);
+            // 加载失败不影响游戏进行
+        }
+    };
+
+    const initializeGame = async () => {
+        try {
+            setLoading(true);
+            // 加载对话历史
+            const historyRes = await gameApi.getDialogueHistory(sessionId);
+            setDialogueHistory(historyRes.data);
+
+            // 检查是否有用户角色信息（单人和多人剧本都可能有）
+            if (session?.userCharacterInfo) {
+                // 显示用户角色的初始化界面
+                setUserCharacterInfo(session.userCharacterInfo);
+                setGameStarted(false);
+                setLoading(false);
+                return;
+            }
+
+            // 如果没有userCharacterInfo，直接开始游戏
+            startGame();
+        } catch (error) {
+            console.error('Failed to initialize game:', error);
+            setLoading(false);
+        }
+    };
+
+    const startGame = async () => {
+        try {
+            setLoading(true);
+            // 设置初始叙述
+            setNarrative(
+                `欢迎来到《${script?.title}》！\n\n${script?.backgroundStory}\n\n故事即将开始...`
+            );
+
+            // 设置初始选择
+            setChoices([
+                { id: '1', text: '准备好了，让我们开始吧！' },
+                { id: '2', text: '我想先了解更多背景信息' },
+                { id: '3', text: '告诉我更多关于这些角色的信息' },
+            ]);
+        } catch (error) {
+            console.error('Failed to initialize game:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 用户选择一个选项（但不确认）
+    const handleOptionSelect = (option: any) => {
+        setSelectedOption(option);
+        console.log('📌 用户选中了选项:', option.文本);
+    };
+
+    // WebSocket 消息处理：故事生成完成
+    const handleStoryGenerated = (message: any) => {
+        console.log('✅ 收到生成的故事');
+        setNarrative(message.data.narrative);
+        setChoices(message.data.options || []);
+        setDialogueHistory(message.data.dialogueHistory || []);
+        setLoading(false);
+        setSelectedOption(null);
+    };
+
+    // WebSocket 消息处理：故事生成错误
+    const handleStoryError = (message: any) => {
+        console.error('❌ 故事生成错误:', message.error);
+        setError(message.error);
+        setLoading(false);
+        // 3秒后重置
+        setTimeout(() => {
+            setError(null);
+            setGameStarted(false);
+            setSelectedStrategy(null);
+        }, 3000);
+    };
+
+    // 调试面板：修改系统提示
+    const handleSystemPromptChange = (newPrompt: string) => {
+        setSystemPromptOverride(newPrompt);
+        setIsSystemPromptModified(true);
+    };
+
+    // 调试面板：修改模型
+    const handleModelChange = (newModel: string) => {
+        setSelectedModel(newModel);
+    };
+
+    // 调试面板：重置为默认
+    const handleResetPrompt = () => {
+        setSystemPromptOverride(defaultSystemPrompt);
+        setIsSystemPromptModified(false);
+    };
+
+    // 调试面板：复制系统提示
+    const handleCopyPrompt = () => {
+        navigator.clipboard.writeText(systemPromptOverride);
+        alert('系统提示已复制到剪贴板');
+    };
+
+    // 用户点击确认按钮
+    const handleConfirmSelection = async () => {
+        if (!selectedOption) return;
+        await handleStrategySelection(selectedOption);
+    };
+
+    const handleStrategySelection = async (strategy: any) => {
+        try {
+            setLoading(true);
+            setSelectedStrategy(strategy);
+            setGameStarted(true);  // 立即进入"生成中"界面
+            setSelectedOption(null);
+
+            console.log('🎬 用户确认了策略:', strategy.文本);
+            console.log('📡 提交选择到后端（异步处理）');
+            console.log('🔧 调试信息:', {
+                isCustomPrompt: isSystemPromptModified,
+                selectedModel,
+            });
+
+            // 提交策略选择到后端（后端会异步处理 AI 请求）
+            const response = await gameApi.submitChoice(
+                sessionId,
+                {
+                    choiceId: `strategy-${strategy.id}`,
+                    userInput: strategy.文本,
+                    systemPromptOverride: isSystemPromptModified ? systemPromptOverride : undefined,
+                    selectedModel,
+                }
+            );
+
+            // 检查是否是立即返回的"生成中"状态
+            if (response?.data?.status === 'generating') {
+                console.log('⏳ 后端已收到请求，正在异步生成故事...');
+                // 继续等待 WebSocket 消息
+                // WebSocket 会在故事生成完成后发送 'story_generated' 消息
+            } else if (response?.data?.narrative) {
+                // 如果不是异步处理，直接处理响应（兼容旧版本）
+                console.log('📖 模型返回的响应:', response.data);
+                setNarrative(response.data.narrative);
+                setChoices(response.data.options || response.data.choices || []);
+
+                if (response.data.dialogueHistory) {
+                    setDialogueHistory(response.data.dialogueHistory);
+                }
+
+                setLoading(false);
+                setSelectedOption(null);
+            } else {
+                // 异步处理模式 - 等待 WebSocket 消息
+                console.log('⏳ 异步模式 - 等待 WebSocket 消息...');
+            }
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : '提交选择失败，请重试';
+            console.error('❌ 提交策略选择失败:', error);
+            setError(errorMsg);
+            setLoading(false);
+            // 重置选择状态以便重试
+            setTimeout(() => {
+                setGameStarted(false);
+                setSelectedStrategy(null);
+                setError(null);
+                setSelectedOption(null);
+            }, 3000);
+        }
+    };
+
+    // 替换故事中的角色变量（如 {{角色A}}、{{角色B}} 等）
+    const replaceCharacterVariables = (text: string): string => {
+        if (!text || !session?.characterMappings) return text;
+
+        let result = text;
+        const characterMappings = session.characterMappings;
+
+        // 替换所有 {{角色X}} 形式的变量
+        // 角色A、角色B 等对应到 characterMappings 中的第 0、1 个角色
+        const characterLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+
+        characterLabels.forEach((label, index) => {
+            if (index < characterMappings.length) {
+                const characterName = characterMappings[index].userAICharacterName ||
+                    characterMappings[index].scriptCharacterName ||
+                    `角色${label}`;
+                const regex = new RegExp(`{{角色${label}}}`, 'g');
+                result = result.replace(regex, characterName);
+            }
+        });
+
+        // 也替换 {{角色0}}、{{角色1}} 这种数字形式
+        characterMappings.forEach((mapping: any, index: number) => {
+            const characterName = mapping.userAICharacterName || mapping.scriptCharacterName || `角色${index}`;
+            const regex = new RegExp(`{{角色${index}}}`, 'g');
+            result = result.replace(regex, characterName);
+        });
+
+        return result;
+    };
+
+    const handleChoice = async (choiceId: string) => {
+        try {
+            setLoading(true);
+            const response = await gameApi.submitChoice(sessionId, choiceId, userInput);
+
+            // 更新叙述
+            setNarrative(response.data.narrative);
+            setChoices(response.data.choices);
+
+            // 更新对话历史
+            setDialogueHistory(response.data.dialogueHistory);
+
+            // 清空用户输入
+            setUserInput('');
+            setShowCustomInput(false);
+        } catch (error) {
+            console.error('Failed to submit choice:', error);
+            alert('提交选择失败，请重试');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // 多人剧本：显示角色初始化界面
+    if (!gameStarted && userCharacterInfo) {
+        return (
+            <div className="max-w-4xl mx-auto px-4 py-8">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-8 border border-gray-700"
+                >
+                    {/* 角色初始化界面 */}
+                    <div className="space-y-6">
+                        {/* 标题 */}
+                        <div className="text-center mb-8">
+                            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                                🎭 你将扮演
+                            </h2>
+                            <h1 className="text-5xl font-bold text-white">{userCharacterInfo.scriptCharacterName}</h1>
+                        </div>
+
+                        {/* 角色信息 */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* 角色简介 */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="bg-gray-900 rounded-lg p-6 border border-gray-700"
+                            >
+                                <h3 className="text-xl font-bold text-blue-400 mb-3">📖 角色简介</h3>
+                                <p className="text-gray-300 leading-relaxed">{userCharacterInfo.角色简介}</p>
+                            </motion.div>
+
+                            {/* 角色目标 */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="bg-gray-900 rounded-lg p-6 border border-gray-700"
+                            >
+                                <h3 className="text-xl font-bold text-purple-400 mb-3">🎯 角色目标</h3>
+                                <p className="text-gray-300 leading-relaxed">{userCharacterInfo.角色目标}</p>
+                            </motion.div>
+                        </div>
+
+                        {/* 角色视角的故事背景 */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-gray-900 rounded-lg p-6 border border-gray-700"
+                        >
+                            <h3 className="text-xl font-bold text-green-400 mb-3">🌍 故事背景</h3>
+                            <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                {replaceCharacterVariables(userCharacterInfo.角色视角的故事背景)}
+                            </p>
+                        </motion.div>
+
+                        {/* 第一个选择点 */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="bg-yellow-900/20 rounded-lg p-6 border border-yellow-700/50"
+                        >
+                            <h3 className="text-xl font-bold text-yellow-400 mb-3">❓ 面临的选择</h3>
+                            <p className="text-gray-300 leading-relaxed text-lg">{replaceCharacterVariables(userCharacterInfo.第一个选择点)}</p>
+                        </motion.div>
+
+                        {/* 预置策略选项 */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-white">💡 你的决策</h3>
+                            <div className="grid grid-cols-1 gap-3">
+                                {userCharacterInfo.预置策略选项?.map((option: any, index: number) => {
+                                    const isSelected = selectedOption?.id === option.id;
+                                    return (
+                                        <motion.button
+                                            key={option.id || index}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: 0.4 + index * 0.1 }}
+                                            whileHover={{ scale: 1.02, x: 10 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => handleOptionSelect(option)}
+                                            disabled={loading}
+                                            className={`text-left p-4 rounded-lg border-2 transition disabled:opacity-50 disabled:cursor-not-allowed ${isSelected
+                                                ? 'bg-gradient-to-r from-green-600 to-green-500 border-green-400 shadow-lg shadow-green-500/50'
+                                                : 'bg-gradient-to-r from-blue-900 to-blue-800 border-blue-700 hover:from-blue-800 hover:to-blue-700 hover:border-blue-600'
+                                                }`}
+                                        >
+                                            <p className="font-bold mb-1">
+                                                {isSelected && '✓ '}
+                                                <span className={isSelected ? 'text-white' : 'text-blue-300'}>
+                                                    {option.文本}
+                                                </span>
+                                            </p>
+                                            <p className={`text-sm ${isSelected ? 'text-green-100' : 'text-gray-400'}`}>
+                                                {option.后果描述}
+                                            </p>
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* 确认按钮 */}
+                            {selectedOption && (
+                                <motion.button
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.5 }}
+                                    onClick={handleConfirmSelection}
+                                    disabled={loading}
+                                    className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-bold rounded-lg shadow-lg hover:shadow-green-500/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    ✓ 确认选择
+                                </motion.button>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        );
+    }
+
+    // 如果正在加载且游戏已开始，显示对话框等待界面
+    if ((loading || error) && gameStarted && selectedStrategy) {
+        return (
+            <div className="max-w-6xl mx-auto px-4 py-8">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-3">
+                        {/* 对话框 - 等待模型响应 或 错误提示 */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className={`rounded-lg p-12 border-2 min-h-64 flex flex-col items-center justify-center ${error
+                                ? 'bg-gradient-to-br from-red-900 to-red-950 border-red-500/50'
+                                : 'bg-gradient-to-br from-gray-800 to-gray-900 border-blue-500/50'
+                                }`}
+                        >
+                            <div className="text-center">
+                                {error ? (
+                                    <>
+                                        {/* 错误提示 */}
+                                        <div className="text-5xl mb-4">⚠️</div>
+                                        <h2 className="text-3xl font-bold text-red-300 mb-4">故事生成失败</h2>
+                                        <p className="text-lg text-red-200 mb-6">{error}</p>
+                                        <p className="text-gray-300">系统将在3秒后返回选择界面，请重试...</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* 动画加载指示器 */}
+                                        <motion.div
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                                            className="mx-auto mb-6 w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full"
+                                        />
+
+                                        <h2 className="text-3xl font-bold text-white mb-4">📖 故事正在生成中...</h2>
+                                        <p className="text-xl text-gray-300 mb-2">您的选择：<span className="text-blue-400 font-bold">{selectedStrategy?.文本}</span></p>
+                                        <p className="text-gray-400 mb-8">AI 正在为您编织故事的下一章</p>
+
+                                        {/* 加载进度提示 */}
+                                        <motion.div
+                                            animate={{ opacity: [0.5, 1, 0.5] }}
+                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                            className="text-sm text-gray-500"
+                                        >
+                                            ⏳ 请稍候...
+                                        </motion.div>
+                                    </>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* 侧边栏 */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                            <h3 className="text-lg font-bold text-white mb-4">🎭 参与角色</h3>
+                            <div className="space-y-3 max-h-64 overflow-y-auto">
+                                {characters && characters.length > 0 ? (
+                                    characters.map((char) => (
+                                        <div
+                                            key={char.id || char.roleId}
+                                            className="p-3 bg-gray-900 rounded-lg border border-gray-600"
+                                        >
+                                            <p className="font-bold text-white text-sm">{char.姓名 || char.name}</p>
+                                            <p className="text-xs text-gray-400 mt-1">{char.角色简介 || char.description}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-400 text-sm">暂无角色信息</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="max-w-6xl mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* 主游戏区域 */}
+                <div className="lg:col-span-3">
+                    {/* 叙述区域 */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg p-8 mb-8 border border-gray-700 min-h-64"
+                    >
+                        <div className="prose prose-invert max-w-none">
+                            <p className="text-lg leading-relaxed text-gray-100 whitespace-pre-wrap">
+                                {replaceCharacterVariables(narrative)}
+                            </p>
+                        </div>
+                    </motion.div>
+
+                    {/* 选择按钮区域 */}
+                    {choices && choices.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="space-y-4 mb-8"
+                        >
+                            <h3 className="text-xl font-bold text-white mb-4">💡 请选择你的下一步行动：</h3>
+
+                            {choices.map((choice, index) => (
+                                <motion.button
+                                    key={choice.id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    whileHover={{ scale: 1.02, x: 10 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => handleChoice(choice.id)}
+                                    disabled={loading}
+                                    className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 border-2 border-blue-700 hover:border-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="font-bold text-blue-300 mr-3">{index + 1}.</span>
+                                    <span className="text-white">{choice.text}</span>
+                                </motion.button>
+                            ))}
+
+                            {/* 自定义输入选项 */}
+                            <motion.button
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: choices.length * 0.1 }}
+                                whileHover={{ scale: 1.02, x: 10 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => setShowCustomInput(!showCustomInput)}
+                                disabled={loading}
+                                className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-purple-900 to-purple-800 hover:from-purple-800 hover:to-purple-700 border-2 border-purple-700 hover:border-purple-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span className="font-bold text-purple-300 mr-3">✏️</span>
+                                <span className="text-white">
+                                    {showCustomInput ? '隐藏自定义输入' : '自定义你的行动'}
+                                </span>
+                            </motion.button>
+
+                            {/* 自定义输入框 */}
+                            {showCustomInput && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="p-4 bg-gray-800 rounded-lg border border-gray-700"
+                                >
+                                    <textarea
+                                        value={userInput}
+                                        onChange={(e) => setUserInput(e.target.value)}
+                                        placeholder="描述你想要做的事情..."
+                                        className="w-full h-24 p-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none"
+                                    />
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleChoice('custom')}
+                                        disabled={loading || !userInput.trim()}
+                                        className="mt-3 w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? '处理中...' : '提交行动'}
+                                    </motion.button>
+                                </motion.div>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
+
+                {/* 侧边栏：角色和历史 */}
+                <div className="lg:col-span-1 space-y-6">
+                    {/* 角色卡片 */}
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <h3 className="text-lg font-bold text-white mb-4">🎭 参与角色</h3>
+                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {characters && characters.length > 0 ? (
+                                characters.map((char) => (
+                                    <div
+                                        key={char.id || char.roleId}
+                                        className="p-3 bg-gray-900 rounded-lg border border-gray-600 hover:border-blue-500 transition"
+                                    >
+                                        <p className="font-bold text-white text-sm">{char.姓名 || char.name}</p>
+                                        <p className="text-xs text-gray-400 mt-1">{char.角色简介 || char.description}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-gray-400 text-sm">暂无角色信息</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 游戏统计 */}
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <h3 className="text-lg font-bold text-white mb-4">📊 游戏进度</h3>
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">对话轮数：</span>
+                                <span className="text-blue-400 font-bold">{dialogueHistory.length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">选择数：</span>
+                                <span className="text-green-400 font-bold">
+                                    {dialogueHistory.filter((d) => d.type === 'user-input').length}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">当前状态：</span>
+                                <span className="text-yellow-400 font-bold">进行中</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 加载指示器 */}
+                    {loading && (
+                        <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/50 animate-pulse">
+                            <p className="text-blue-400 text-sm text-center">AI正在生成故事...</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 调试面板开关按钮 */}
+            <button
+                onClick={() => setDebugMode(!debugMode)}
+                className="fixed bottom-8 right-8 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold border border-gray-600 shadow-lg transition z-40"
+            >
+                🔧 {debugMode ? '关闭' : '打开'}调试
+            </button>
+
+            {/* 调试面板 */}
+            {debugMode && (
+                <motion.div
+                    initial={{ opacity: 0, x: 400 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 400 }}
+                    transition={{ type: 'spring', damping: 20 }}
+                    className="fixed right-0 top-0 w-96 h-screen bg-gray-900 text-white overflow-auto p-6 border-l border-gray-700 z-50 shadow-2xl"
+                >
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-bold">⚙️ 调试面板</h3>
+                        <button
+                            onClick={() => setDebugMode(false)}
+                            className="text-gray-400 hover:text-white text-xl"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    {/* 模型选择 */}
+                    <div className="mb-6 pb-6 border-b border-gray-700">
+                        <label className="block text-sm font-semibold mb-3 text-blue-300">📌 选择模型</label>
+                        <select
+                            value={selectedModel}
+                            onChange={(e) => handleModelChange(e.target.value)}
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-blue-500 focus:outline-none hover:bg-gray-700"
+                        >
+                            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="openai/gpt-4">GPT-4</option>
+                            <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+                            <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
+                            <option value="meta-llama/llama-2-70b-chat">Llama 2 70B</option>
+                        </select>
+                        <p className="text-xs text-gray-400 mt-2">当前模型: <span className="text-green-400 font-semibold">{selectedModel}</span></p>
+                    </div>
+
+                    {/* 系统提示编辑 */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-semibold mb-2 text-blue-300">
+                            📝 系统提示 {isSystemPromptModified && <span className="text-yellow-400">(已修改)</span>}
+                        </label>
+                        <textarea
+                            value={systemPromptOverride}
+                            onChange={(e) => handleSystemPromptChange(e.target.value)}
+                            placeholder="留空表示使用 Firebase 默认系统提示..."
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-xs h-48 font-mono text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none hover:border-gray-500"
+                        />
+                        <p className="text-xs text-gray-400 mt-2">
+                            {isSystemPromptModified ? '✓ 使用自定义系统提示' : '✓ 使用 Firebase 默认系统提示'}
+                        </p>
+                    </div>
+
+                    {/* 操作按钮 */}
+                    <div className="flex gap-2 mb-6">
+                        <button
+                            onClick={handleResetPrompt}
+                            disabled={!isSystemPromptModified || !defaultSystemPrompt}
+                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"
+                        >
+                            🔄 重置
+                        </button>
+                        <button
+                            onClick={handleCopyPrompt}
+                            disabled={!systemPromptOverride}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"
+                        >
+                            📋 复制
+                        </button>
+                    </div>
+
+                    {/* 状态信息 */}
+                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                        <p className="font-semibold mb-3 text-green-300">📊 当前状态</p>
+                        <div className="space-y-2 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">模型:</span>
+                                <span className="text-green-400 font-semibold">{selectedModel.split('/')[1]}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">系统提示:</span>
+                                <span className={isSystemPromptModified ? 'text-yellow-400 font-semibold' : 'text-gray-400'}>
+                                    {isSystemPromptModified ? '自定义' : '默认'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-400">游戏状态:</span>
+                                <span className="text-blue-400 font-semibold">{gameStarted ? '进行中' : '未开始'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 提示信息 */}
+                    <div className="mt-6 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-xs text-blue-300">
+                        <p className="font-semibold mb-1">💡 使用提示</p>
+                        <ul className="list-disc list-inside space-y-1">
+                            <li>修改后的系统提示在下一次选择时生效</li>
+                            <li>模型更改会立即应用</li>
+                            <li>清空系统提示框将使用 Firebase 默认值</li>
+                        </ul>
+                    </div>
+                </motion.div>
+            )}
+
+            {/* 对话历史展示 */}
+            {dialogueHistory.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="mt-12 bg-gray-800 rounded-lg p-6 border border-gray-700"
+                >
+                    <h3 className="text-2xl font-bold text-white mb-6">💬 对话历史</h3>
+                    <DialogueDisplay dialogues={dialogueHistory} />
+                </motion.div>
+            )}
+        </div>
+    );
+}
+
