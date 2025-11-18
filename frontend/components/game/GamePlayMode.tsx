@@ -296,9 +296,9 @@ export default function GamePlayMode({
             setTimeout(() => {
                 setError(null);
             }, 3000);
-        } finally {
-            setLoading(false);
         }
+        // 注意：不在 finally 中设置 setLoading(false)
+        // 异步生成模式下，loading 会在 handleStoryGenerated 中设置为 false
     };
 
     // 多人剧本：显示角色初始化界面
