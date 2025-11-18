@@ -94,6 +94,7 @@ app.get('/', (req, res) => {
 
 // 健康检查
 app.get('/health', (req, res) => {
+    console.log('💚 健康检查请求收到');
     res.json({
         status: 'ok',
         timestamp: new Date(),
