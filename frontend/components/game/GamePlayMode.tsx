@@ -154,19 +154,22 @@ export default function GamePlayMode({
                 userInput: strategy.文本,
             });
 
+            console.log('📦 后端响应:', response);
+
             // 检查是否是立即返回的"生成中"状态
-            if (response?.data?.status === 'generating') {
+            // 注意：gameApi.submitChoice 已经返回了 response.data，所以这里直接访问 response.status
+            if (response?.status === 'generating') {
                 console.log('⏳ 后端已收到请求，正在异步生成故事...');
                 // 继续等待 WebSocket 消息
                 // WebSocket 会在故事生成完成后发送 'story_generated' 消息
-            } else if (response?.data?.narrative) {
+            } else if (response?.narrative) {
                 // 如果不是异步处理，直接处理响应（兼容旧版本）
-                console.log('📖 模型返回的响应:', response.data);
-                setNarrative(response.data.narrative);
-                setChoices(response.data.options || response.data.choices || []);
+                console.log('📖 模型返回的响应:', response);
+                setNarrative(response.narrative);
+                setChoices(response.options || response.choices || []);
 
-                if (response.data.dialogueHistory) {
-                    setDialogueHistory(response.data.dialogueHistory);
+                if (response.dialogueHistory) {
+                    setDialogueHistory(response.dialogueHistory);
                 }
 
                 setLoading(false);
