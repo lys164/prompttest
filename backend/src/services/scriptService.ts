@@ -373,9 +373,31 @@ export class ScriptService {
         // 🔍 获取角色详细设定 - 可能在多个字段中
         let roleDetailsData = data.角色详细设定 || [];
 
-        // 如果没有角色详细设定，也将文档本身作为一个详细设定使用
+        // 如果没有角色详细设定，则尝试基于角色池构造
         if (!roleDetailsData || roleDetailsData.length === 0) {
-            console.log('  ⚠️ 没有找到角色详细设定，使用文档本身作为角色详细设定');
+            if (rolePoolData && rolePoolData.length > 0) {
+                console.log('  ⚠️ 没有找到角色详细设定，基于角色池构造默认设定');
+                roleDetailsData = rolePoolData.map((char: any, index: number) => {
+                    const derivedRoleId = char.roleId || char.id || `role-${doc.id}-${index}`;
+                    return {
+                        roleId: derivedRoleId,
+                        角色简介: char.角色简介 || '故事的主角',
+                        角色目标: char.角色目标 || '',
+                        角色视角的故事背景: char.角色视角的故事背景 || data.角色视角的故事背景 || '',
+                        第一个选择点: char.第一个选择点 || data.第一个选择点 || '',
+                        预置策略选项: Array.isArray(char.预置策略选项)
+                            ? char.预置策略选项
+                            : Array.isArray(data.预置策略选项)
+                                ? data.预置策略选项
+                                : [],
+                    };
+                });
+            }
+        }
+
+        // 如果依然没有，最后再以文档自身作为单个角色详设
+        if (!roleDetailsData || roleDetailsData.length === 0) {
+            console.log('  ⚠️ 仍然没有角色详细设定，使用文档本身作为角色详细设定');
             const fallbackRoleId = 'player-role-0';
             roleDetailsData = [{
                 roleId: fallbackRoleId,
