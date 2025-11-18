@@ -85,21 +85,14 @@ app.use('/api/dev', devRoutes);
 
 // 根路径 - 供 Railway 默认健康检查
 app.get('/', (req, res) => {
-    res.json({
-        status: 'ok',
-        message: 'Interactive drama backend is running',
-        timestamp: new Date(),
-    });
+    console.log('🏠 根路径访问');
+    res.status(200).send('OK');
 });
 
-// 健康检查
+// 健康检查 - 明确返回 200 状态码
 app.get('/health', (req, res) => {
     console.log('💚 健康检查请求收到');
-    res.json({
-        status: 'ok',
-        timestamp: new Date(),
-        uptime: process.uptime(),
-    });
+    res.status(200).send('OK');
 });
 
 // 错误处理中间件
