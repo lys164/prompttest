@@ -307,6 +307,11 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
             });
         }
 
+        const normalizedUserChoice =
+            typeof userInput === 'string' && userInput.trim().length > 0
+                ? userInput.trim()
+                : `选择了选项: ${choiceId}`;
+
         // 记录用户选择
         const userChoice: DialogueEntry = {
             id: uuidv4(),
@@ -314,7 +319,7 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
             userAICharacterId: 'player',
             userAICharacterName: '玩家',
             scriptCharacterName: '玩家',
-            content: userInput || `选择了选项: ${choiceId}`,
+            content: normalizedUserChoice,
             type: 'user-input',
             timestamp: new Date(),
         };
@@ -481,9 +486,30 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
         const firstRole = script.角色池?.[0];
         const firstDetail = script.角色详细设定?.[0];
 
-        replacements['角色视角的故事背景'] = firstDetail?.角色视角的故事背景 || firstRole?.角色视角的故事背景 || '故事背景';
-        replacements['上一个选择点'] = firstDetail?.第一个选择点 || firstRole?.第一个选择点 || '选择点';
-        replacements['用户选择的选项的具体内容'] = userInput || `选择了选项: ${choiceId}`;
+        const aiHistory = session.dialogueHistory.filter((entry: DialogueEntry) => entry.type === 'ai-response');
+        const hasPreviousAiResponses = aiHistory.length > 0;
+
+        if (hasPreviousAiResponses) {
+            replacements['角色视角的故事背景'] =
+                session.currentChoicePoint ||
+                aiHistory[aiHistory.length - 1]?.content ||
+                script.故事内容 ||
+                '故事背景';
+            replacements['上一个选择点'] = '';
+        } else {
+            replacements['角色视角的故事背景'] =
+                firstDetail?.角色视角的故事背景 ||
+                firstRole?.角色视角的故事背景 ||
+                script.故事内容 ||
+                '故事背景';
+            replacements['上一个选择点'] =
+                firstDetail?.第一个选择点 ||
+                firstRole?.第一个选择点 ||
+                session.currentChoicePoint ||
+                '选择点';
+        }
+
+        replacements['用户选择的选项的具体内容'] = normalizedUserChoice;
         replacements['历史重要情节'] = session.dialogueHistory
             .filter((entry: any) => entry.type === 'ai-response')
             .map((entry: any) => entry.content)
@@ -526,7 +552,7 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 const generateResponse = await aiService.generateMultiCharacterStory({
                     sessionId: session.id,
                     currentContext: script.故事内容,
-                    userChoice: userInput || `选择了选项: ${choiceId}`,
+                    userChoice: normalizedUserChoice,
                     participatingCharacters,
                     systemPrompt: finalSystemPrompt,
                     temperature: 0.7,
@@ -563,7 +589,7 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 session.updatedAt = new Date();
                 session.choiceHistory.push({
                     选择点ID: choiceId,
-                    选择的选项: userInput || `选项 ${choiceId}`,
+                    选择的选项: normalizedUserChoice,
                     时间戳: new Date(),
                 });
 
