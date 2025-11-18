@@ -59,20 +59,23 @@ export function broadcastToSession(sessionId: string, data: any) {
 
 // 中间件
 // CORS 配置
+const allowedOrigins = [
+  'https://prompttest-steel.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:8080',
+  /\.vercel\.app$/,  // 允许所有 Vercel 部署
+  /\.railway\.app$/, // 允许所有 Railway 部署
+];
+
 app.use(cors({
-  origin: [
-    'https://prompttest-steel.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:8080',
-    /\.vercel\.app$/,  // 允许所有 Vercel 部署
-    /\.railway\.app$/, // 允许所有 Railway 部署
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400, // 24 小时
+  origin: allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400, // 24 小时
 }));
+console.log('✅ CORS 已启用，允许来源:', allowedOrigins);
 app.use(express.json());
 
 // 路由
