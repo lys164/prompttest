@@ -534,9 +534,10 @@ export class ScriptService {
         }
         const timestamp = Date.now();
         return details.map((detail, index: number) => {
-            console.log('📋 原始 detail 对象:', JSON.stringify(detail, null, 2));
-            console.log('📋 预置策略选项类型:', typeof detail.预置策略选项);
-            console.log('📋 预置策略选项值:', JSON.stringify(detail.预置策略选项, null, 2));
+            // 减少日志输出以降低内存占用
+            // console.log('📋 原始 detail 对象:', JSON.stringify(detail, null, 2));
+            // console.log('📋 预置策略选项类型:', typeof detail.预置策略选项);
+            // console.log('📋 预置策略选项值:', JSON.stringify(detail.预置策略选项, null, 2));
 
             // 如果预置策略选项不是数组，可能是对象，需要转换
             let optionsArray = detail.预置策略选项 || [];

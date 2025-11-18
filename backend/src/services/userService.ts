@@ -118,7 +118,10 @@ export class UserService {
             const livestorySnapshot = await db.collection('livestory').get();
             if (!livestorySnapshot.empty) {
                 console.log(`🤖 从 livestory 集合读取 ${livestorySnapshot.size} 个AI角色`);
-                return this.mapFirebaseCharacters(livestorySnapshot);
+                const characters = this.mapFirebaseCharacters(livestorySnapshot);
+                console.log(`🔍 AI角色列表 IDs: [${characters.map(c => c.id).join(', ')}]`);
+                console.log(`🔍 AI角色列表 姓名: [${characters.map(c => c.姓名).join(', ')}]`);
+                return characters;
             }
 
             // 第二优先级：从 users/{userId}/aiCharacters 读取
