@@ -647,19 +647,28 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 console.log(`✅ 故事生成完成，通过 WebSocket 发送给前端`);
 
                 // 通过 WebSocket 发送生成的故事给前端
-                broadcastToSession(sessionId, {
+                const wsMessage = {
                     type: 'story_generated',
-            success: true,
-            data: {
+                    success: true,
+                    data: {
                         narrative: narrativeWithReplacedVariables,
-                choicePoint: generateResponse.nextChoicePoint,
+                        choicePoint: generateResponse.nextChoicePoint,
                         options: replacedOptions,
-                characterResponses: generateResponse.characterResponses,
-                dialogueHistory: session.dialogueHistory,
-                modelUsed: generateResponse.modelUsed,
-                generationTime: generateResponse.generationTime,
-            },
-        });
+                        characterResponses: generateResponse.characterResponses,
+                        dialogueHistory: session.dialogueHistory,
+                        modelUsed: generateResponse.modelUsed,
+                        generationTime: generateResponse.generationTime,
+                    },
+                };
+
+                console.log(`📤 发送 WebSocket 消息结构:`, {
+                    type: wsMessage.type,
+                    success: wsMessage.success,
+                    hasData: !!wsMessage.data,
+                    dataKeys: wsMessage.data ? Object.keys(wsMessage.data) : [],
+                });
+
+                broadcastToSession(sessionId, wsMessage);
             } catch (error) {
                 console.error('❌ 异步生成故事失败:', error);
                 // 通过 WebSocket 发送错误给前端

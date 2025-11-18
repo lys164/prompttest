@@ -109,6 +109,16 @@ export default function GamePlayMode({
     // WebSocket 消息处理：故事生成完成
     const handleStoryGenerated = (message: any) => {
         console.log('✅ 收到生成的故事');
+        console.log('📦 完整的 WebSocket 消息:', JSON.stringify(message, null, 2));
+        
+        // 检查消息结构
+        if (!message || !message.data) {
+            console.error('❌ WebSocket 消息格式错误，缺少 data 字段:', message);
+            setError('接收到的故事数据格式错误');
+            setLoading(false);
+            return;
+        }
+        
         setNarrative(message.data.narrative);
         setChoices(message.data.options || []);
         setDialogueHistory(message.data.dialogueHistory || []);
