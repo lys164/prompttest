@@ -247,22 +247,30 @@ export class ScriptService {
         roleDetail: any
     ): string {
         const characterReplacements: { [key: string]: string } = {
-            // 从 AI 角色信息（livestory 集合的英文字段）
-            '姓名': aiCharacter?.name || '未知角色',
-            '年龄': String(aiCharacter?.age || '未知'),
-            '国籍': aiCharacter?.nationality || '未知',
-            '星座': aiCharacter?.zodiac || '未知',
-            'MBTI': aiCharacter?.mbti || '未知',
-            '和用户的身份': aiCharacter?.relation_to_user || '陌生人',
-            '外貌描述': aiCharacter?.appearance || '普通外表',
-            '面对未知的态度': aiCharacter?.attitude_to_unknown || '谨慎',
-            '恐惧/软肋': aiCharacter?.fear || '未知',
-            '喜好/特长': aiCharacter?.likes || '未知',
-            '讨厌的东西': aiCharacter?.dislikes || '未知',
+            // 从 AI 角色信息 - 使用 mapFirebaseCharacter 映射后的中文字段
+            '姓名': aiCharacter?.姓名 || '未知角色',
+            '年龄': String(aiCharacter?.年龄 || '未知'),
+            '国籍': aiCharacter?.国籍 || '未知',
+            '星座': aiCharacter?.星座 || '未知',
+            'MBTI': aiCharacter?.MBTI || '未知',
+            '和用户的身份': aiCharacter?.和用户的身份 || '陌生人',
+            '外貌描述': aiCharacter?.外貌描述 || '普通外表',
+            '面对未知的态度': aiCharacter?.面对未知的态度 || '谨慎',
+            '恐惧/软肋': aiCharacter?.恐惧软肋 || '未知',
+            '喜好/特长': Array.isArray(aiCharacter?.喜好特长) 
+                ? aiCharacter.喜好特长.join('、') 
+                : '未知',
+            '讨厌的东西': Array.isArray(aiCharacter?.讨厌的东西) 
+                ? aiCharacter.讨厌的东西.join('、') 
+                : '未知',
 
-            // 超能力处理
-            '超能力': aiCharacter?.superpower?.name || '无',
-            '等级': String(aiCharacter?.superpower?.level || '无'),
+            // 超能力处理 - 映射后是数组
+            '超能力': Array.isArray(aiCharacter?.超能力) && aiCharacter.超能力.length > 0
+                ? aiCharacter.超能力.map((p: any) => p.名称).join('、')
+                : '无',
+            '等级': Array.isArray(aiCharacter?.超能力) && aiCharacter.超能力.length > 0
+                ? aiCharacter.超能力.map((p: any) => String(p.等级 || 0)).join('、')
+                : '无',
 
             // 从脚本角色信息
             '角色简介': roleDetail?.角色简介 || scriptCharacter?.角色简介 || '暂无介绍',
