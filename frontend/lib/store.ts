@@ -8,8 +8,8 @@ interface GameStore {
     currentSessionId: string | null;
     setCurrentSessionId: (sessionId: string | null) => void;
 
-    gameMode: 'normal' | 'debug' | 'compare';
-    setGameMode: (mode: 'normal' | 'debug' | 'compare') => void;
+    gameMode: 'normal' | 'compare';
+    setGameMode: (mode: 'normal' | 'compare') => void;
 
     currentNarrative: string;
     setCurrentNarrative: (narrative: string) => void;
@@ -94,54 +94,5 @@ export const useScriptStore = create<ScriptStore>((set) => ({
 
     isLoadingScripts: false,
     setIsLoadingScripts: (loading) => set({ isLoadingScripts: loading }),
-}));
-
-// ===== 开发者模式 Store =====
-interface DevStore {
-    debugSessionId: string | null;
-    setDebugSessionId: (sessionId: string | null) => void;
-
-    debugResponses: any[];
-    addDebugResponse: (response: any) => void;
-    clearDebugResponses: () => void;
-
-    compareResults: any[];
-    setCompareResults: (results: any[]) => void;
-
-    customPrompt: string;
-    setCustomPrompt: (prompt: string) => void;
-
-    selectedModel: string;
-    setSelectedModel: (model: string) => void;
-
-    availableModels: any[];
-    setAvailableModels: (models: any[]) => void;
-
-    isDevMode: boolean;
-    toggleDevMode: () => void;
-}
-
-export const useDevStore = create<DevStore>((set) => ({
-    debugSessionId: null,
-    setDebugSessionId: (sessionId) => set({ debugSessionId: sessionId }),
-
-    debugResponses: [],
-    addDebugResponse: (response) => set((state) => ({ debugResponses: [...state.debugResponses, response] })),
-    clearDebugResponses: () => set({ debugResponses: [] }),
-
-    compareResults: [],
-    setCompareResults: (results) => set({ compareResults: results }),
-
-    customPrompt: '',
-    setCustomPrompt: (prompt) => set({ customPrompt: prompt }),
-
-    selectedModel: 'gpt-4-turbo-preview',
-    setSelectedModel: (model) => set({ selectedModel: model }),
-
-    availableModels: [],
-    setAvailableModels: (models) => set({ availableModels: models }),
-
-    isDevMode: false,
-    toggleDevMode: () => set((state) => ({ isDevMode: !state.isDevMode })),
 }));
 

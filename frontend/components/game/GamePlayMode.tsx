@@ -34,13 +34,6 @@ export default function GamePlayMode({
     const [error, setError] = useState<string | null>(null);
     const [selectedOption, setSelectedOption] = useState<any>(null);
 
-    // 调试面板相关 state
-    const [debugMode, setDebugMode] = useState(false);
-    const [systemPromptOverride, setSystemPromptOverride] = useState<string>('');
-    const [defaultSystemPrompt, setDefaultSystemPrompt] = useState<string>(''); // 存储 Firebase 的默认提示
-    const [selectedModel, setSelectedModel] = useState<string>('openai/gpt-4-turbo');
-    const [isSystemPromptModified, setIsSystemPromptModified] = useState(false);
-
     useEffect(() => {
         // 初始化游戏场景
         initializeGame();
@@ -60,40 +53,7 @@ export default function GamePlayMode({
         };
     }, [sessionId]);
 
-    // 单独监听 script 变化，用于加载系统提示
-    useEffect(() => {
-        if (script?.id) {
-            loadSystemPrompt();
-        }
-    }, [script?.id]);
-
-    const loadSystemPrompt = async () => {
-        try {
-            // 从剧本信息确定提示类型
-            let promptType = 'single-single-sp'; // 默认值
-            if (script?.剧本类别) {
-                const scriptCat = script.剧本类别;
-                if (scriptCat.includes('【多人】') && scriptCat.includes('【多AI】')) {
-                    promptType = 'multi-multi-sp';
-                } else if (scriptCat.includes('【单人】') && scriptCat.includes('【多AI】')) {
-                    promptType = 'single-multi-sp';
-                }
-            }
-
-            console.log(`📝 确定的提示类型: ${promptType}`);
-
-            // 调用 API 获取系统提示，传递 scriptId
-            const promptRes = await gameApi.getSystemPrompt(sessionId, script?.id);
-            if (promptRes.data?.systemPrompt) {
-                setDefaultSystemPrompt(promptRes.data.systemPrompt);
-                setSystemPromptOverride(promptRes.data.systemPrompt);
-                console.log('✅ 系统提示加载成功');
-            }
-        } catch (promptError) {
-            console.warn('⚠️ 加载系统提示失败:', promptError);
-            // 加载失败不影响游戏进行
-        }
-    };
+    // 调试相关功能已移除，保持玩法简洁一致
 
     const initializeGame = async () => {
         try {
@@ -169,29 +129,6 @@ export default function GamePlayMode({
         }, 3000);
     };
 
-    // 调试面板：修改系统提示
-    const handleSystemPromptChange = (newPrompt: string) => {
-        setSystemPromptOverride(newPrompt);
-        setIsSystemPromptModified(true);
-    };
-
-    // 调试面板：修改模型
-    const handleModelChange = (newModel: string) => {
-        setSelectedModel(newModel);
-    };
-
-    // 调试面板：重置为默认
-    const handleResetPrompt = () => {
-        setSystemPromptOverride(defaultSystemPrompt);
-        setIsSystemPromptModified(false);
-    };
-
-    // 调试面板：复制系统提示
-    const handleCopyPrompt = () => {
-        navigator.clipboard.writeText(systemPromptOverride);
-        alert('系统提示已复制到剪贴板');
-    };
-
     // 用户点击确认按钮
     const handleConfirmSelection = async () => {
         if (!selectedOption) return;
@@ -207,21 +144,11 @@ export default function GamePlayMode({
 
             console.log('🎬 用户确认了策略:', strategy.文本);
             console.log('📡 提交选择到后端（异步处理）');
-            console.log('🔧 调试信息:', {
-                isCustomPrompt: isSystemPromptModified,
-                selectedModel,
-            });
-
             // 提交策略选择到后端（后端会异步处理 AI 请求）
-            const response = await gameApi.submitChoice(
-                sessionId,
-                {
-                    choiceId: `strategy-${strategy.id}`,
-                    userInput: strategy.文本,
-                    systemPromptOverride: isSystemPromptModified ? systemPromptOverride : undefined,
-                    selectedModel,
-                }
-            );
+            const response = await gameApi.submitChoice(sessionId, {
+                choiceId: `strategy-${strategy.id}`,
+                userInput: strategy.文本,
+            });
 
             // 检查是否是立即返回的"生成中"状态
             if (response?.data?.status === 'generating') {
@@ -655,118 +582,6 @@ export default function GamePlayMode({
                     )}
                 </div>
             </div>
-
-            {/* 调试面板开关按钮 */}
-            <button
-                onClick={() => setDebugMode(!debugMode)}
-                className="fixed bottom-8 right-8 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-semibold border border-gray-600 shadow-lg transition z-40"
-            >
-                🔧 {debugMode ? '关闭' : '打开'}调试
-            </button>
-
-            {/* 调试面板 */}
-            {debugMode && (
-                <motion.div
-                    initial={{ opacity: 0, x: 400 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 400 }}
-                    transition={{ type: 'spring', damping: 20 }}
-                    className="fixed right-0 top-0 w-96 h-screen bg-gray-900 text-white overflow-auto p-6 border-l border-gray-700 z-50 shadow-2xl"
-                >
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold">⚙️ 调试面板</h3>
-                        <button
-                            onClick={() => setDebugMode(false)}
-                            className="text-gray-400 hover:text-white text-xl"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    {/* 模型选择 */}
-                    <div className="mb-6 pb-6 border-b border-gray-700">
-                        <label className="block text-sm font-semibold mb-3 text-blue-300">📌 选择模型</label>
-                        <select
-                            value={selectedModel}
-                            onChange={(e) => handleModelChange(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm text-white focus:border-blue-500 focus:outline-none hover:bg-gray-700"
-                        >
-                            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
-                            <option value="openai/gpt-4">GPT-4</option>
-                            <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                            <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
-                            <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
-                            <option value="meta-llama/llama-2-70b-chat">Llama 2 70B</option>
-                        </select>
-                        <p className="text-xs text-gray-400 mt-2">当前模型: <span className="text-green-400 font-semibold">{selectedModel}</span></p>
-                    </div>
-
-                    {/* 系统提示编辑 */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-semibold mb-2 text-blue-300">
-                            📝 系统提示 {isSystemPromptModified && <span className="text-yellow-400">(已修改)</span>}
-                        </label>
-                        <textarea
-                            value={systemPromptOverride}
-                            onChange={(e) => handleSystemPromptChange(e.target.value)}
-                            placeholder="留空表示使用 Firebase 默认系统提示..."
-                            className="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-xs h-48 font-mono text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none hover:border-gray-500"
-                        />
-                        <p className="text-xs text-gray-400 mt-2">
-                            {isSystemPromptModified ? '✓ 使用自定义系统提示' : '✓ 使用 Firebase 默认系统提示'}
-                        </p>
-                    </div>
-
-                    {/* 操作按钮 */}
-                    <div className="flex gap-2 mb-6">
-                        <button
-                            onClick={handleResetPrompt}
-                            disabled={!isSystemPromptModified || !defaultSystemPrompt}
-                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"
-                        >
-                            🔄 重置
-                        </button>
-                        <button
-                            onClick={handleCopyPrompt}
-                            disabled={!systemPromptOverride}
-                            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"
-                        >
-                            📋 复制
-                        </button>
-                    </div>
-
-                    {/* 状态信息 */}
-                    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                        <p className="font-semibold mb-3 text-green-300">📊 当前状态</p>
-                        <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">模型:</span>
-                                <span className="text-green-400 font-semibold">{selectedModel.split('/')[1]}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">系统提示:</span>
-                                <span className={isSystemPromptModified ? 'text-yellow-400 font-semibold' : 'text-gray-400'}>
-                                    {isSystemPromptModified ? '自定义' : '默认'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">游戏状态:</span>
-                                <span className="text-blue-400 font-semibold">{gameStarted ? '进行中' : '未开始'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 提示信息 */}
-                    <div className="mt-6 p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg text-xs text-blue-300">
-                        <p className="font-semibold mb-1">💡 使用提示</p>
-                        <ul className="list-disc list-inside space-y-1">
-                            <li>修改后的系统提示在下一次选择时生效</li>
-                            <li>模型更改会立即应用</li>
-                            <li>清空系统提示框将使用 Firebase 默认值</li>
-                        </ul>
-                    </div>
-                </motion.div>
-            )}
 
             {/* 对话历史展示 */}
             {dialogueHistory.length > 0 && (

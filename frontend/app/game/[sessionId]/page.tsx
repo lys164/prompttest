@@ -4,10 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gameApi, scriptApi } from '@/lib/api';
-import { useGameStore, useDevStore } from '@/lib/store';
+import { useGameStore } from '@/lib/store';
 import GamePlayMode from '@/components/game/GamePlayMode';
-import DebugMode from '@/components/game/DebugMode';
-import CompareMode from '@/components/game/CompareMode';
 
 export default function GamePage() {
     const params = useParams();
@@ -19,12 +17,9 @@ export default function GamePage() {
     const [script, setScript] = useState<any>(null);
     const [characters, setCharacters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [gameMode, setGameMode] = useState<'normal' | 'debug' | 'compare'>(
-        (modeParam as 'normal' | 'debug' | 'compare') || 'normal'
+    const [gameMode, setGameMode] = useState<'normal' | 'compare'>(
+        modeParam === 'compare' ? 'compare' : 'normal'
     );
-
-    const isDevMode = useDevStore((state) => state.isDevMode);
-    const toggleDevMode = useDevStore((state) => state.toggleDevMode);
 
     useEffect(() => {
         loadGameData();
@@ -118,55 +113,22 @@ export default function GamePage() {
                     <div>
                         <h1 className="text-2xl font-bold text-white">{script?.title}</h1>
                         <p className="text-gray-400 text-sm">
-                            模式: {gameMode === 'normal' ? '🎮 正常游玩' : gameMode === 'debug' ? '🔧 调试模式' : '⚖️ 对比模式'}
+                            模式: {gameMode === 'normal' ? '🎮 正常游玩' : '⚖️ 对比模式'}
                         </p>
                     </div>
-
-                    {/* 模式切换按钮 */}
-                    {gameMode !== 'normal' && (
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={toggleDevMode}
-                            className={`px-4 py-2 rounded-lg font-medium transition ${isDevMode
-                                    ? 'bg-purple-600 text-white'
-                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                }`}
-                        >
-                            {isDevMode ? '关闭开发者面板' : '打开开发者面板'}
-                        </motion.button>
-                    )}
                 </div>
             </header>
 
             {/* 游戏主内容 */}
             <AnimatePresence mode="wait">
-                {gameMode === 'normal' ? (
-                    <GamePlayMode
-                        key="game-play"
-                        sessionId={sessionId}
-                        script={script}
-                        characters={characters}
-                        session={session}
-                        onSessionUpdate={setSession}
-                    />
-                ) : gameMode === 'debug' ? (
-                    <DebugMode
-                        key="debug-mode"
-                        sessionId={sessionId}
-                        script={script}
-                        characters={characters}
-                        isOpen={isDevMode}
-                    />
-                ) : (
-                    <CompareMode
-                        key="compare-mode"
-                        sessionId={sessionId}
-                        script={script}
-                        characters={characters}
-                        isOpen={isDevMode}
-                    />
-                )}
+                <GamePlayMode
+                    key={gameMode === 'normal' ? 'game-play' : 'compare-play'}
+                    sessionId={sessionId}
+                    script={script}
+                    characters={characters}
+                    session={session}
+                    onSessionUpdate={setSession}
+                />
             </AnimatePresence>
         </main>
     );
