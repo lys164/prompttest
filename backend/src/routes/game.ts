@@ -113,20 +113,23 @@ router.post('/sessions', async (req: Request, res: Response) => {
         } else {
             // 单人剧本：必须 X 个角色
             if (characterMappings.length !== requiredCount) {
-                return res.status(400).json({
-                    success: false,
+            return res.status(400).json({
+                success: false,
                     error: `单人剧本需要 ${requiredCount} 个角色，但提供了 ${characterMappings.length} 个`,
-                });
-            }
+            });
+        }
         }
 
         // 缓存每个映射对应的 AI 角色信息，避免后续重复读取导致数据缺失
         characterMappings = await Promise.all(
             characterMappings.map(async (mapping: CharacterMapping, index: number) => {
                 try {
+                    console.log(`🔍 查找 AI 角色: userId=${userId}, characterId=${mapping.userAICharacterId}`);
                     const userAICharacter = await userService.getUserAICharacter(userId, mapping.userAICharacterId);
                     if (!userAICharacter) {
                         console.warn(`⚠️ 未找到用户 ${userId} 的 AI 角色 ${mapping.userAICharacterId}`);
+                    } else {
+                        console.log(`✅ 找到 AI 角色: ${userAICharacter.姓名} (id: ${userAICharacter.id})`);
                     }
                     return {
                         ...mapping,
@@ -361,9 +364,9 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
 
                 if (!userAIChar) {
                     userAIChar = await userService.getUserAICharacter(
-                        session.userId,
-                        mapping.userAICharacterId
-                    );
+                    session.userId,
+                    mapping.userAICharacterId
+                );
 
                     if (userAIChar) {
                         mapping.userAICharacter = userAIChar;
@@ -581,15 +584,15 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 // 确定最终使用的系统提示（优先使用自定义，否则使用 Firebase 默认）
                 const finalSystemPrompt = systemPromptOverride || customSystemPrompt;
 
-                // 生成故事
-                const generateResponse = await aiService.generateMultiCharacterStory({
-                    sessionId: session.id,
-                    currentContext: script.故事内容,
+        // 生成故事
+        const generateResponse = await aiService.generateMultiCharacterStory({
+            sessionId: session.id,
+            currentContext: script.故事内容,
                     userChoice: normalizedUserChoice,
-                    participatingCharacters,
+            participatingCharacters,
                     systemPrompt: finalSystemPrompt,
-                    temperature: 0.7,
-                    maxTokens: 2000,
+            temperature: 0.7,
+            maxTokens: 2000,
                     model: selectedModel,  // 传入选择的模型
                     scriptType: promptType,  // 传入脚本类型用于响应格式解析
                 }, finalSystemPrompt, customUserPrompt);
@@ -601,32 +604,32 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 );
 
                 // 记录AI的回复（包含系统提示和用户提示用于调试）
-                const aiResponse: DialogueEntry = {
-                    id: uuidv4(),
-                    roleId: 'narrator',
-                    userAICharacterId: 'narrator',
-                    userAICharacterName: '叙述者',
-                    scriptCharacterName: '叙述者',
+        const aiResponse: DialogueEntry = {
+            id: uuidv4(),
+            roleId: 'narrator',
+            userAICharacterId: 'narrator',
+            userAICharacterName: '叙述者',
+            scriptCharacterName: '叙述者',
                     content: narrativeWithReplacedVariables,
-                    type: 'ai-response',
-                    timestamp: new Date(),
-                    modelUsed: generateResponse.modelUsed,
+            type: 'ai-response',
+            timestamp: new Date(),
+            modelUsed: generateResponse.modelUsed,
                     // 添加调试信息
                     systemPrompt: finalSystemPrompt,
                     userPrompt: customUserPrompt,
-                };
-                session.dialogueHistory.push(aiResponse);
+        };
+        session.dialogueHistory.push(aiResponse);
 
-                // 更新会话
-                session.currentChoicePoint = generateResponse.nextChoicePoint;
-                session.updatedAt = new Date();
-                session.choiceHistory.push({
-                    选择点ID: choiceId,
+        // 更新会话
+        session.currentChoicePoint = generateResponse.nextChoicePoint;
+        session.updatedAt = new Date();
+        session.choiceHistory.push({
+            选择点ID: choiceId,
                     选择的选项: normalizedUserChoice,
-                    时间戳: new Date(),
-                });
+            时间戳: new Date(),
+        });
 
-                sessions.set(sessionId, session);
+        sessions.set(sessionId, session);
 
                 // 替换选项中的角色变量
                 const replacedOptions = generateResponse.newOptions.map((opt: any) => ({
@@ -640,17 +643,17 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
                 // 通过 WebSocket 发送生成的故事给前端
                 broadcastToSession(sessionId, {
                     type: 'story_generated',
-                    success: true,
-                    data: {
+            success: true,
+            data: {
                         narrative: narrativeWithReplacedVariables,
-                        choicePoint: generateResponse.nextChoicePoint,
+                choicePoint: generateResponse.nextChoicePoint,
                         options: replacedOptions,
-                        characterResponses: generateResponse.characterResponses,
-                        dialogueHistory: session.dialogueHistory,
-                        modelUsed: generateResponse.modelUsed,
-                        generationTime: generateResponse.generationTime,
-                    },
-                });
+                characterResponses: generateResponse.characterResponses,
+                dialogueHistory: session.dialogueHistory,
+                modelUsed: generateResponse.modelUsed,
+                generationTime: generateResponse.generationTime,
+            },
+        });
             } catch (error) {
                 console.error('❌ 异步生成故事失败:', error);
                 // 通过 WebSocket 发送错误给前端
