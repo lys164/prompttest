@@ -558,10 +558,14 @@ router.post('/sessions/:sessionId/choose', async (req: Request, res: Response) =
             .join('\n') || '故事刚刚开始';
 
         // 替换 system prompt 模板中的变量
-        const customSystemPrompt = scriptService.replacePromptTemplate(systemPromptTemplate, replacements);
+        let customSystemPrompt = scriptService.replacePromptTemplate(systemPromptTemplate, replacements);
 
         // 替换 user prompt 模板中的变量
-        const customUserPrompt = scriptService.replacePromptTemplate(userPromptTemplate, replacements);
+        let customUserPrompt = scriptService.replacePromptTemplate(userPromptTemplate, replacements);
+
+        // 再替换角色变量（{{角色A}}, {{角色B}} 等）
+        customSystemPrompt = scriptService.replaceCharacterVariables(customSystemPrompt, participatingCharacters);
+        customUserPrompt = scriptService.replaceCharacterVariables(customUserPrompt, participatingCharacters);
 
         console.log(`✅ System prompt 准备就绪，长度: ${customSystemPrompt.length}`);
         console.log(`✅ User prompt 准备就绪，长度: ${customUserPrompt.length}`);
