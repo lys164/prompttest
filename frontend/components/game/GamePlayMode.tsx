@@ -37,7 +37,7 @@ export default function GamePlayMode({
     // 调试面板状态
     const [showDebugPanel, setShowDebugPanel] = useState(false);
     const [systemPromptOverride, setSystemPromptOverride] = useState('');
-    const [selectedModel, setSelectedModel] = useState('openai/gpt-4-turbo');
+    const [selectedModel, setSelectedModel] = useState('openai/gpt-5.1-chat');
     const [currentSystemPrompt, setCurrentSystemPrompt] = useState('');
 
     useEffect(() => {
@@ -757,11 +757,9 @@ export default function GamePlayMode({
                                     onChange={(e) => setSelectedModel(e.target.value)}
                                     className="w-full bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 >
-                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
-                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                    <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
-                                    <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
-                                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+                                    <option value="openai/gpt-5.1-chat">GPT-5.1 (最新通用模型)</option>
+                                    <option value="anthropic/claude-haiku-4.5">Claude 4.5 Haiku (推理模型)</option>
+                                    <option value="google/gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash (快速响应)</option>
                                 </select>
                             </div>
 
@@ -770,7 +768,7 @@ export default function GamePlayMode({
                                 <button
                                     onClick={() => {
                                         setSystemPromptOverride('');
-                                        setSelectedModel('openai/gpt-4-turbo');
+                                        setSelectedModel('openai/gpt-5.1-chat');
                                     }}
                                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition"
                                 >
