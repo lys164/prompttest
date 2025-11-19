@@ -33,6 +33,12 @@ export default function GamePlayMode({
     const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedOption, setSelectedOption] = useState<any>(null);
+    
+    // 调试面板状态
+    const [showDebugPanel, setShowDebugPanel] = useState(false);
+    const [systemPromptOverride, setSystemPromptOverride] = useState('');
+    const [selectedModel, setSelectedModel] = useState('openai/gpt-4-turbo');
+    const [currentSystemPrompt, setCurrentSystemPrompt] = useState('');
 
     useEffect(() => {
         // 初始化游戏场景
@@ -122,6 +128,17 @@ export default function GamePlayMode({
         setNarrative(message.data.narrative);
         setChoices(message.data.options || []);
         setDialogueHistory(message.data.dialogueHistory || []);
+        
+        // 更新调试面板：获取最新的 system prompt
+        if (message.data.dialogueHistory && message.data.dialogueHistory.length > 0) {
+            const latestAIResponse = message.data.dialogueHistory
+                .filter((entry: any) => entry.type === 'ai-response')
+                .pop();
+            if (latestAIResponse?.systemPrompt) {
+                setCurrentSystemPrompt(latestAIResponse.systemPrompt);
+            }
+        }
+        
         setLoading(false);
         setError(null);  // 清除可能存在的错误状态
         setSelectedOption(null);
@@ -162,6 +179,8 @@ export default function GamePlayMode({
             const response = await gameApi.submitChoice(sessionId, {
                 choiceId: `strategy-${strategy.id}`,
                 userInput: strategy.文本,
+                systemPromptOverride: systemPromptOverride || undefined,
+                selectedModel: selectedModel || undefined,
             });
 
             console.log('📦 后端响应:', response);
@@ -262,6 +281,8 @@ export default function GamePlayMode({
             const response = await gameApi.submitChoice(sessionId, {
                 choiceId: payloadChoiceId,
                 userInput: payloadUserInput,
+                systemPromptOverride: systemPromptOverride || undefined,
+                selectedModel: selectedModel || undefined,
             });
 
             console.log('📦 handleChoice 收到响应:', response);
@@ -668,6 +689,102 @@ export default function GamePlayMode({
                 >
                     <h3 className="text-2xl font-bold text-white mb-6">💬 对话历史</h3>
                     <DialogueDisplay dialogues={dialogueHistory} />
+                </motion.div>
+            )}
+
+            {/* 调试面板切换按钮 */}
+            <button
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className="fixed top-4 right-4 z-50 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-full text-sm font-bold shadow-lg transition"
+            >
+                🔧 {showDebugPanel ? '关闭调试' : '调试面板'}
+            </button>
+
+            {/* 调试面板 */}
+            {showDebugPanel && (
+                <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t-4 border-blue-500 p-6 z-40 shadow-2xl max-h-96 overflow-y-auto"
+                >
+                    <div className="max-w-7xl mx-auto">
+                        <h3 className="text-xl font-bold mb-4 text-blue-400">🔧 调试面板</h3>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* System Prompt 显示与编辑 */}
+                            <div>
+                                <label className="block text-sm font-bold mb-2 text-gray-300">
+                                    📝 System Prompt 覆盖：
+                                    <span className="text-xs text-gray-500 ml-2">(留空使用默认)</span>
+                                </label>
+                                <textarea
+                                    value={systemPromptOverride}
+                                    onChange={(e) => setSystemPromptOverride(e.target.value)}
+                                    className="w-full h-40 bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none font-mono text-sm"
+                                    placeholder="输入自定义 system prompt，留空则使用默认"
+                                />
+                                
+                                {currentSystemPrompt && (
+                                    <div className="mt-2">
+                                        <button
+                                            onClick={() => setSystemPromptOverride(currentSystemPrompt)}
+                                            className="text-xs text-blue-400 hover:text-blue-300 underline"
+                                        >
+                                            📋 复制当前使用的 prompt 到编辑区
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 当前使用的 System Prompt 显示 */}
+                            <div>
+                                <label className="block text-sm font-bold mb-2 text-gray-300">
+                                    👀 当前实际使用的 System Prompt：
+                                </label>
+                                <div className="w-full h-40 bg-gray-800 text-gray-400 rounded-lg p-3 border border-gray-700 overflow-y-auto font-mono text-xs whitespace-pre-wrap">
+                                    {currentSystemPrompt || '暂无（尚未生成故事）'}
+                                </div>
+                            </div>
+
+                            {/* 模型选择 */}
+                            <div>
+                                <label className="block text-sm font-bold mb-2 text-gray-300">
+                                    🤖 AI 模型选择：
+                                </label>
+                                <select
+                                    value={selectedModel}
+                                    onChange={(e) => setSelectedModel(e.target.value)}
+                                    className="w-full bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none"
+                                >
+                                    <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                                    <option value="openai/gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                    <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+                                    <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
+                                    <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+                                </select>
+                            </div>
+
+                            {/* 操作按钮 */}
+                            <div className="flex items-end gap-2">
+                                <button
+                                    onClick={() => {
+                                        setSystemPromptOverride('');
+                                        setSelectedModel('openai/gpt-4-turbo');
+                                    }}
+                                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition"
+                                >
+                                    🔄 重置
+                                </button>
+                                <button
+                                    onClick={() => setShowDebugPanel(false)}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm transition"
+                                >
+                                    ✅ 应用并关闭
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </motion.div>
             )}
         </div>
