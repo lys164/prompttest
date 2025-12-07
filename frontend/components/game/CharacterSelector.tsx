@@ -17,17 +17,17 @@ interface CharacterSelectorProps {
  */
 function detectCharacterVariablesInText(text: string): string[] {
   if (!text) return [];
-  
+
   const regex = /{{(角色[A-Za-z0-9]+)}}/g;
   const matches: string[] = [];
   let match;
-  
+
   while ((match = regex.exec(text)) !== null) {
     if (!matches.includes(match[1])) {
       matches.push(match[1]);
     }
   }
-  
+
   return matches;
 }
 
@@ -37,7 +37,7 @@ function detectCharacterVariablesInText(text: string): string[] {
 function detectScriptCharacterVariables(script: any): { [key: string]: number } {
   const variables: { [key: string]: number } = {};
   const characterLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
-  
+
   // 检测角色池中的变量
   if (script?.角色池) {
     script.角色池.forEach((role: any) => {
@@ -53,7 +53,7 @@ function detectScriptCharacterVariables(script: any): { [key: string]: number } 
       });
     });
   }
-  
+
   // 检测角色详细设定中的变量
   if (script?.角色详细设定) {
     script.角色详细设定.forEach((detail: any) => {
@@ -69,7 +69,7 @@ function detectScriptCharacterVariables(script: any): { [key: string]: number } 
       });
     });
   }
-  
+
   return variables;
 }
 
@@ -93,17 +93,17 @@ export default function CharacterSelector({
 
   // 获取剧本需要的AI角色数量
   const requiredCount = script?.参与AI数 || 1;
-  
+
   // 判断是否为多人剧本（根据剧本类别中是否包含"多人"）
   const isMultiPlayer = script?.剧本类别?.includes('【多人】') || false;
-  
+
   // 判断是否为单人多AI（【单人】【多AI】）
   const isSinglePlayerMultiAI = script?.剧本类别?.includes('【单人】') && script?.剧本类别?.includes('【多AI】');
-  
+
   // 检测剧本是否使用了角色变量
   const characterVariables = detectScriptCharacterVariables(script);
   const hasCharacterVariables = Object.keys(characterVariables).length > 0;
-  
+
   // 多人剧本可以选 1-X 个，单人剧本必须选 X 个
   const minCount = isMultiPlayer ? 1 : requiredCount;
   const maxCount = isMultiPlayer ? 1 : requiredCount;
@@ -123,7 +123,7 @@ export default function CharacterSelector({
       setLoading(true);
       setError(null);
       const response = await axios.get(`${apiUrl}/game/user-characters/${userId}`);
-      
+
       if (response.data.data && Array.isArray(response.data.data)) {
         setUserAICharacters(response.data.data);
       } else {
@@ -182,7 +182,7 @@ export default function CharacterSelector({
       finalCharacterMappings = variableNames.map((varName, index) => {
         const aiCharacterId = variableMappings[varName];
         const userCharacter = userAICharacters.find((c) => c.id === aiCharacterId);
-        
+
         return {
           userAICharacterId: aiCharacterId,
           scriptRoleId: varName, // 使用变量名作为角色标识
@@ -202,7 +202,7 @@ export default function CharacterSelector({
       finalCharacterMappings = scriptCharacters.map((scriptChar: any) => {
         const aiCharacterId = characterMappings[scriptChar.roleId || scriptChar.id];
         const userCharacter = userAICharacters.find((c) => c.id === aiCharacterId);
-        
+
         return {
           userAICharacterId: aiCharacterId,
           scriptRoleId: scriptChar.roleId || scriptChar.id,
@@ -219,7 +219,7 @@ export default function CharacterSelector({
 
       const userCharacterId = selectedCharacters[0];
       const userCharacter = userAICharacters.find((c) => c.id === userCharacterId);
-      
+
       finalCharacterMappings = [{
         userAICharacterId: userCharacterId,
         scriptRoleId: 'player-role-0',
@@ -241,7 +241,7 @@ export default function CharacterSelector({
       // 构建角色映射
       finalCharacterMappings = selectedCharacters.map((userCharacterId, index) => {
         const userCharacter = userAICharacters.find((c) => c.id === userCharacterId);
-        
+
         return {
           userAICharacterId: userCharacterId,
           scriptRoleId: `player-role-${index}`,
@@ -284,9 +284,9 @@ export default function CharacterSelector({
   const canSelectMore = selectedCharacters.length < maxCount;
   const selectionComplete = hasCharacterVariables
     ? Object.keys(variableMappings).length === actualRequiredMappings
-    : isSinglePlayerMultiAI 
-    ? Object.keys(characterMappings).length === requiredMappings
-    : selectedCharacters.length >= minCount;
+    : isSinglePlayerMultiAI
+      ? Object.keys(characterMappings).length === requiredMappings
+      : selectedCharacters.length >= minCount;
 
   // 单人多AI的进度 / 角色变量的进度
   const mappingProgress = hasCharacterVariables
@@ -306,8 +306,8 @@ export default function CharacterSelector({
             {isSinglePlayerMultiAI
               ? `这是单人多AI剧本，请为每个剧本角色选择对应的AI角色`
               : isMultiPlayer
-              ? `这是多人剧本，请选择恰好 1 个AI角色作为你的角色`
-              : `这是单人剧本，请选择恰好 ${requiredCount} 个AI角色参与游戏`}
+                ? `这是多人剧本，请选择恰好 1 个AI角色作为你的角色`
+                : `这是单人剧本，请选择恰好 ${requiredCount} 个AI角色参与游戏`}
           </p>
 
           {/* 已选择的角色数量提示 */}
@@ -388,34 +388,34 @@ export default function CharacterSelector({
                 {scriptCharacters.map((scriptChar: any, idx: number) => {
                   console.log(`🎭 脚本角色 ${idx}:`, { roleId: scriptChar.roleId || scriptChar.id, name: scriptChar.姓名 });
                   return (
-                  <div key={scriptChar.roleId || scriptChar.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                    <div className="mb-3">
-                      <h4 className="text-lg font-bold text-blue-300 mb-1">{scriptChar.姓名}</h4>
-                      <p className="text-sm text-gray-400">{scriptChar.角色简介}</p>
+                    <div key={scriptChar.roleId || scriptChar.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                      <div className="mb-3">
+                        <h4 className="text-lg font-bold text-blue-300 mb-1">{scriptChar.姓名}</h4>
+                        <p className="text-sm text-gray-400">{scriptChar.角色简介}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-300 block mb-2">
+                          选择AI角色：
+                          {characterMappings[scriptChar.roleId || scriptChar.id] && (
+                            <span className="ml-2 text-green-400 font-bold">
+                              ✓ {userAICharacters.find(c => c.id === characterMappings[scriptChar.roleId || scriptChar.id])?.姓名}
+                            </span>
+                          )}
+                        </label>
+                        <select
+                          value={characterMappings[scriptChar.roleId || scriptChar.id] || ''}
+                          onChange={(e) => handleScriptCharacterAISelection(scriptChar.roleId || scriptChar.id, e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
+                        >
+                          <option value="">-- 选择一个AI角色 --</option>
+                          {userAICharacters.map((char) => (
+                            <option key={char.id} value={char.id}>
+                              {char.姓名} (MBTI: {char.MBTI || '未知'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm text-gray-300 block mb-2">
-                        选择AI角色：
-                        {characterMappings[scriptChar.roleId || scriptChar.id] && (
-                          <span className="ml-2 text-green-400 font-bold">
-                            ✓ {userAICharacters.find(c => c.id === characterMappings[scriptChar.roleId || scriptChar.id])?.姓名}
-                          </span>
-                        )}
-                      </label>
-                      <select
-                        value={characterMappings[scriptChar.roleId || scriptChar.id] || ''}
-                        onChange={(e) => handleScriptCharacterAISelection(scriptChar.roleId || scriptChar.id, e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:outline-none"
-                      >
-                        <option value="">-- 选择一个AI角色 --</option>
-                        {userAICharacters.map((char) => (
-                          <option key={char.id} value={char.id}>
-                            {char.姓名} (MBTI: {char.MBTI || '未知'})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
                   );
                 })}
               </div>
@@ -438,13 +438,12 @@ export default function CharacterSelector({
                       whileTap={canSelect ? { scale: 0.95 } : undefined}
                       onClick={() => canSelect && handleSelectCharacter(character.id)}
                       disabled={!canSelect}
-                      className={`p-4 rounded-lg text-center transition ${
-                        isSelected
+                      className={`p-4 rounded-lg text-center transition ${isSelected
                           ? 'bg-gradient-to-r from-blue-600 to-blue-700 border-2 border-blue-400 text-white shadow-lg shadow-blue-500/50'
                           : canSelect
-                          ? 'bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-gray-500'
-                          : 'bg-gray-700 border-2 border-gray-600 text-gray-500 opacity-50 cursor-not-allowed'
-                      }`}
+                            ? 'bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-gray-500'
+                            : 'bg-gray-700 border-2 border-gray-600 text-gray-500 opacity-50 cursor-not-allowed'
+                        }`}
                     >
                       <p className="font-bold text-sm mb-1">{character.姓名}</p>
                       <p className="text-xs text-gray-300 mb-1">
@@ -510,11 +509,10 @@ export default function CharacterSelector({
               whileTap={selectionComplete ? { scale: 0.95 } : undefined}
               onClick={handleConfirm}
               disabled={!selectionComplete}
-              className={`flex-1 px-4 py-3 rounded-lg text-white font-bold transition ${
-                selectionComplete
+              className={`flex-1 px-4 py-3 rounded-lg text-white font-bold transition ${selectionComplete
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 cursor-pointer'
                   : 'bg-gray-600 cursor-not-allowed opacity-50'
-              }`}
+                }`}
             >
               ✅ 开始游戏
             </motion.button>

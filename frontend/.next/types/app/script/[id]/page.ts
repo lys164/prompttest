@@ -1,4 +1,4 @@
-// File: /Users/a0/Downloads/interactive-drama-game/frontend/app/script/[id]/page.tsx
+// File: /Users/a0/Desktop/产品项目/interactive-drama-game/frontend/app/script/[id]/page.tsx
 import * as entry from '../../../../../app/script/[id]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -25,12 +25,24 @@ interface SessionConfig {
 }
 
 const DEFAULT_MODELS = [
+    'deepseek/deepseek-chat-v3-0324',
+    'qwen/qwen-2.5-72b-instruct',
     'google/gemini-flash-1.5',
-    'anthropic/claude-3-haiku',
-    'deepseek/deepseek-chat',
 ];
 
 const MODEL_OPTIONS = [
+    {
+        group: '🇨🇳 中国模型', options: [
+            { value: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
+            { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+            { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' },
+            { value: 'qwen/qwen-2.5-coder-32b-instruct', label: 'Qwen 2.5 Coder 32B' },
+            { value: 'thudm/glm-4-plus', label: 'GLM-4 Plus (智谱)' },
+            { value: 'thudm/glm-z1-32b', label: 'GLM-Z1 32B (智谱)' },
+            { value: 'moonshotai/moonshot-v1-128k', label: 'Moonshot V1 128K (Kimi)' },
+            { value: 'moonshotai/kimi-vl-a3b-thinking:free', label: 'Kimi VL (免费)' },
+        ]
+    },
     {
         group: '🔥 推荐模型', options: [
             { value: 'google/gemini-flash-1.5', label: 'Gemini 1.5 Flash' },
@@ -52,8 +64,6 @@ const MODEL_OPTIONS = [
             { value: 'openai/gpt-4-turbo', label: 'GPT-4 Turbo' },
             { value: 'openai/gpt-4o', label: 'GPT-4o' },
             { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus' },
-            { value: 'deepseek/deepseek-chat', label: 'DeepSeek Chat' },
-            { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' },
         ]
     },
 ];

@@ -275,6 +275,63 @@ router.get('/debug-session/:sessionId', (req: Request, res: Response) => {
  */
 router.get('/models', (req: Request, res: Response) => {
   const availableModels = [
+    // 中国模型
+    {
+      id: 'deepseek/deepseek-chat-v3-0324',
+      name: 'DeepSeek V3',
+      provider: 'DeepSeek',
+      description: '最新深度学习模型',
+      category: 'chinese',
+    },
+    {
+      id: 'deepseek/deepseek-r1',
+      name: 'DeepSeek R1',
+      provider: 'DeepSeek',
+      description: '推理增强模型',
+      category: 'chinese',
+    },
+    {
+      id: 'qwen/qwen-2.5-72b-instruct',
+      name: 'Qwen 2.5 72B',
+      provider: 'Alibaba',
+      description: '通义千问大规模模型',
+      category: 'chinese',
+    },
+    {
+      id: 'qwen/qwen-2.5-coder-32b-instruct',
+      name: 'Qwen 2.5 Coder 32B',
+      provider: 'Alibaba',
+      description: '通义千问代码模型',
+      category: 'chinese',
+    },
+    {
+      id: 'thudm/glm-4-plus',
+      name: 'GLM-4 Plus',
+      provider: '智谱AI',
+      description: '智谱旗舰模型',
+      category: 'chinese',
+    },
+    {
+      id: 'thudm/glm-z1-32b',
+      name: 'GLM-Z1 32B',
+      provider: '智谱AI',
+      description: '智谱推理模型',
+      category: 'chinese',
+    },
+    {
+      id: 'moonshotai/moonshot-v1-128k',
+      name: 'Moonshot V1 128K',
+      provider: 'Moonshot (Kimi)',
+      description: '长上下文模型',
+      category: 'chinese',
+    },
+    {
+      id: 'moonshotai/kimi-vl-a3b-thinking:free',
+      name: 'Kimi VL',
+      provider: 'Moonshot (Kimi)',
+      description: '免费多模态模型',
+      category: 'chinese',
+    },
     // 推荐模型
     {
       id: 'google/gemini-flash-1.5',
@@ -353,20 +410,6 @@ router.get('/models', (req: Request, res: Response) => {
       name: 'Claude 3 Opus',
       provider: 'Anthropic',
       description: '最强推理能力',
-      category: 'premium',
-    },
-    {
-      id: 'deepseek/deepseek-chat',
-      name: 'DeepSeek Chat',
-      provider: 'DeepSeek',
-      description: '深度学习优化模型',
-      category: 'premium',
-    },
-    {
-      id: 'qwen/qwen-2.5-72b-instruct',
-      name: 'Qwen 2.5 72B',
-      provider: 'Alibaba',
-      description: '通义千问大规模模型',
       category: 'premium',
     },
   ];

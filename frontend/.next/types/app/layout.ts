@@ -1,4 +1,4 @@
-// File: /Users/a0/Downloads/interactive-drama-game/frontend/app/layout.tsx
+// File: /Users/a0/Desktop/产品项目/interactive-drama-game/frontend/app/layout.tsx
 import * as entry from '../../../app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

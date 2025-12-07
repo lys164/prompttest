@@ -757,6 +757,16 @@ export default function GamePlayMode({
                                     onChange={(e) => setSelectedModel(e.target.value)}
                                     className="w-full bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 >
+                                    <optgroup label="🇨🇳 中国模型">
+                                        <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
+                                        <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                                        <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
+                                        <option value="qwen/qwen-2.5-coder-32b-instruct">Qwen 2.5 Coder 32B</option>
+                                        <option value="thudm/glm-4-plus">GLM-4 Plus (智谱)</option>
+                                        <option value="thudm/glm-z1-32b">GLM-Z1 32B (智谱)</option>
+                                        <option value="moonshotai/moonshot-v1-128k">Moonshot V1 128K (Kimi)</option>
+                                        <option value="moonshotai/kimi-vl-a3b-thinking:free">Kimi VL (免费)</option>
+                                    </optgroup>
                                     <optgroup label="🔥 推荐模型">
                                         <option value="google/gemini-flash-1.5">Gemini 1.5 Flash</option>
                                         <option value="google/gemini-pro-1.5">Gemini 1.5 Pro</option>
@@ -773,8 +783,6 @@ export default function GamePlayMode({
                                         <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
                                         <option value="openai/gpt-4o">GPT-4o</option>
                                         <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
-                                        <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
-                                        <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
                                     </optgroup>
                                 </select>
                             </div>
