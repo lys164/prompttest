@@ -758,6 +758,7 @@ export default function GamePlayMode({
                                     className="w-full bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 >
                                     <optgroup label="🇨🇳 中国模型">
+                                        <option value="doubao-seed-1-6-251015">豆包 1.6 (字节)</option>
                                         <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
                                         <option value="deepseek/deepseek-r1">DeepSeek R1</option>
                                         <option value="qwen/qwen3-max">Qwen3 Max</option>

@@ -33,6 +33,7 @@ const DEFAULT_MODELS = [
 const MODEL_OPTIONS = [
     {
         group: '🇨🇳 中国模型', options: [
+            { value: 'doubao-seed-1-6-251015', label: '豆包 1.6 (字节)' },
             { value: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
             { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
             { value: 'qwen/qwen3-max', label: 'Qwen3 Max' },

@@ -4,10 +4,17 @@ import { GenerationRequest, GenerationResponse, DebugResponse } from '../types';
 export class AIService {
     private openrouterApiKey: string;
     private openrouterBaseUrl = 'https://openrouter.ai/api/v1/chat/completions';
+    
+    // 豆包 API 配置
+    private doubaoApiKey: string;
+    private doubaoBaseUrl = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
 
     constructor() {
         this.openrouterApiKey = process.env.OPENROUTER_API_KEY || '';
-        console.log(`🔑 AIService 初始化，API Key: ${this.openrouterApiKey ? '✅ 已配置' : '❌ 未配置'}`);
+        this.doubaoApiKey = process.env.DOUBAO_API_KEY || 'c1eecedc-50a6-4f75-8179-59c721b07a68';
+        console.log(`🔑 AIService 初始化:`);
+        console.log(`   OpenRouter: ${this.openrouterApiKey ? '✅ 已配置' : '❌ 未配置'}`);
+        console.log(`   豆包 API: ${this.doubaoApiKey ? '✅ 已配置' : '❌ 未配置'}`);
     }
 
     /**
@@ -173,6 +180,61 @@ ${characterDescriptions}
     }
 
     /**
+     * 调用豆包 API (火山引擎)
+     */
+    private async callDoubao(
+        modelId: string,
+        messages: Array<{ role: string; content: string }>,
+        temperature: number,
+        maxTokens: number
+    ): Promise<{ content: string; tokens: number }> {
+        try {
+            console.log(`🫛 调用豆包 API: ${modelId}`);
+            const response = await axios.post(
+                this.doubaoBaseUrl,
+                {
+                    model: modelId,
+                    messages,
+                    temperature,
+                    max_tokens: maxTokens,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${this.doubaoApiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            console.log(`✅ 豆包 API 调用成功`);
+            return {
+                content: response.data.choices[0]?.message?.content || '',
+                tokens: response.data.usage?.total_tokens || 0,
+            };
+        } catch (error: any) {
+            console.error('❌ 豆包 API error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * 统一调用 AI API（根据模型自动选择 provider）
+     */
+    async callAI(
+        modelId: string,
+        messages: Array<{ role: string; content: string }>,
+        temperature: number = 0.7,
+        maxTokens: number = 2000
+    ): Promise<{ content: string; tokens: number }> {
+        // 判断是豆包模型还是 OpenRouter 模型
+        if (modelId.startsWith('doubao-')) {
+            return await this.callDoubao(modelId, messages, temperature, maxTokens);
+        } else {
+            return await this.callOpenRouter(modelId, messages, temperature, maxTokens);
+        }
+    }
+
+    /**
      * 生成演示响应（当没有配置 API 密钥时使用）
      */
     private generateDemoResponse(request: GenerationRequest): GenerationResponse {
@@ -314,7 +376,8 @@ ${characterDescriptions}
 
         messages.push({ role: 'user', content: userPrompt || '请根据上下文继续故事。' });
 
-        return await this.callOpenRouter(model, messages, temperature, 2000);
+        // 使用统一的 callAI 方法，自动判断使用哪个 provider
+        return await this.callAI(model, messages, temperature, 2000);
     }
 
     /**
