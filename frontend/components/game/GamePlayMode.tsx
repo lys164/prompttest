@@ -33,7 +33,7 @@ export default function GamePlayMode({
     const [selectedStrategy, setSelectedStrategy] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
     const [selectedOption, setSelectedOption] = useState<any>(null);
-    
+
     // 调试面板状态
     const [showDebugPanel, setShowDebugPanel] = useState(false);
     const [systemPromptOverride, setSystemPromptOverride] = useState('');
@@ -116,7 +116,7 @@ export default function GamePlayMode({
     const handleStoryGenerated = (message: any) => {
         console.log('✅ 收到生成的故事');
         console.log('📦 完整的 WebSocket 消息:', JSON.stringify(message, null, 2));
-        
+
         // 检查消息结构
         if (!message || !message.data) {
             console.error('❌ WebSocket 消息格式错误，缺少 data 字段:', message);
@@ -124,11 +124,11 @@ export default function GamePlayMode({
             setLoading(false);
             return;
         }
-        
+
         setNarrative(message.data.narrative);
         setChoices(message.data.options || []);
         setDialogueHistory(message.data.dialogueHistory || []);
-        
+
         // 更新调试面板：获取最新的 system prompt
         if (message.data.dialogueHistory && message.data.dialogueHistory.length > 0) {
             const latestAIResponse = message.data.dialogueHistory
@@ -138,7 +138,7 @@ export default function GamePlayMode({
                 setCurrentSystemPrompt(latestAIResponse.systemPrompt);
             }
         }
-        
+
         setLoading(false);
         setError(null);  // 清除可能存在的错误状态
         setSelectedOption(null);
@@ -297,11 +297,11 @@ export default function GamePlayMode({
                 console.log('📖 同步模式，直接更新界面');
                 setNarrative(response.narrative);
                 setChoices(response.options || response.choices || []);
-                
+
                 if (response.dialogueHistory) {
                     setDialogueHistory(response.dialogueHistory);
                 }
-                
+
                 setLoading(false);
             }
 
@@ -556,74 +556,74 @@ export default function GamePlayMode({
 
                     {/* 选择按钮区域 */}
                     {choices && choices.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                        className="space-y-4 mb-8"
-                    >
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                            className="space-y-4 mb-8"
+                        >
                             <h3 className="text-xl font-bold text-white mb-4">💡 请选择你的下一步行动：</h3>
 
-                        {choices.map((choice, index) => (
+                            {choices.map((choice, index) => (
+                                <motion.button
+                                    key={choice.id}
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    whileHover={{ scale: 1.02, x: 10 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => handleChoice(choice)}
+                                    disabled={loading}
+                                    className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 border-2 border-blue-700 hover:border-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="font-bold text-blue-300 mr-3">{index + 1}.</span>
+                                    <span className="text-white">{choice.text}</span>
+                                </motion.button>
+                            ))}
+
+                            {/* 自定义输入选项 */}
                             <motion.button
-                                key={choice.id}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                                transition={{ delay: choices.length * 0.1 }}
                                 whileHover={{ scale: 1.02, x: 10 }}
                                 whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleChoice(choice)}
+                                onClick={() => setShowCustomInput(!showCustomInput)}
                                 disabled={loading}
-                                className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 border-2 border-blue-700 hover:border-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-purple-900 to-purple-800 hover:from-purple-800 hover:to-purple-700 border-2 border-purple-700 hover:border-purple-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <span className="font-bold text-blue-300 mr-3">{index + 1}.</span>
-                                <span className="text-white">{choice.text}</span>
+                                <span className="font-bold text-purple-300 mr-3">✏️</span>
+                                <span className="text-white">
+                                    {showCustomInput ? '隐藏自定义输入' : '自定义你的行动'}
+                                </span>
                             </motion.button>
-                        ))}
 
-                        {/* 自定义输入选项 */}
-                        <motion.button
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: choices.length * 0.1 }}
-                            whileHover={{ scale: 1.02, x: 10 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setShowCustomInput(!showCustomInput)}
-                            disabled={loading}
-                            className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-purple-900 to-purple-800 hover:from-purple-800 hover:to-purple-700 border-2 border-purple-700 hover:border-purple-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span className="font-bold text-purple-300 mr-3">✏️</span>
-                            <span className="text-white">
-                                {showCustomInput ? '隐藏自定义输入' : '自定义你的行动'}
-                            </span>
-                        </motion.button>
-
-                        {/* 自定义输入框 */}
-                        {showCustomInput && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="p-4 bg-gray-800 rounded-lg border border-gray-700"
-                            >
-                                <textarea
-                                    value={userInput}
-                                    onChange={(e) => setUserInput(e.target.value)}
-                                    placeholder="描述你想要做的事情..."
-                                    className="w-full h-24 p-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none"
-                                />
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => handleChoice('custom')}
-                                    disabled={loading || !userInput.trim()}
-                                    className="mt-3 w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            {/* 自定义输入框 */}
+                            {showCustomInput && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="p-4 bg-gray-800 rounded-lg border border-gray-700"
                                 >
-                                    {loading ? '处理中...' : '提交行动'}
-                                </motion.button>
-                            </motion.div>
-                        )}
-                    </motion.div>
+                                    <textarea
+                                        value={userInput}
+                                        onChange={(e) => setUserInput(e.target.value)}
+                                        placeholder="描述你想要做的事情..."
+                                        className="w-full h-24 p-3 bg-gray-900 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none resize-none"
+                                    />
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleChoice('custom')}
+                                        disabled={loading || !userInput.trim()}
+                                        className="mt-3 w-full px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg font-bold text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? '处理中...' : '提交行动'}
+                                    </motion.button>
+                                </motion.div>
+                            )}
+                        </motion.div>
                     )}
                 </div>
 
@@ -635,13 +635,13 @@ export default function GamePlayMode({
                         <div className="space-y-3 max-h-64 overflow-y-auto">
                             {characters && characters.length > 0 ? (
                                 characters.map((char) => (
-                                <div
+                                    <div
                                         key={char.id || char.roleId}
-                                    className="p-3 bg-gray-900 rounded-lg border border-gray-600 hover:border-blue-500 transition"
-                                >
+                                        className="p-3 bg-gray-900 rounded-lg border border-gray-600 hover:border-blue-500 transition"
+                                    >
                                         <p className="font-bold text-white text-sm">{char.姓名 || char.name}</p>
                                         <p className="text-xs text-gray-400 mt-1">{char.角色简介 || char.description}</p>
-                                </div>
+                                    </div>
                                 ))
                             ) : (
                                 <p className="text-gray-400 text-sm">暂无角色信息</p>
@@ -710,7 +710,7 @@ export default function GamePlayMode({
                 >
                     <div className="max-w-7xl mx-auto">
                         <h3 className="text-xl font-bold mb-4 text-blue-400">🔧 调试面板</h3>
-                        
+
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* System Prompt 显示与编辑 */}
                             <div>
@@ -724,7 +724,7 @@ export default function GamePlayMode({
                                     className="w-full h-40 bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none font-mono text-sm"
                                     placeholder="输入自定义 system prompt，留空则使用默认"
                                 />
-                                
+
                                 {currentSystemPrompt && (
                                     <div className="mt-2">
                                         <button
@@ -770,6 +770,9 @@ export default function GamePlayMode({
                                         <option value="moonshotai/kimi-k2:free">Kimi K2 (中文优化)</option>
                                         <option value="thedrummer/anubis-70b-v1.1">Anubis 70B V1.1 (专业)</option>
                                         <option value="thedrummer/skyfall-36b-v2">Skyfall 36B V2 (平衡)</option>
+                                        <option value="zhipu/glm-4.6-flash">GLM-4.6 Flash (智谱)</option>
+                                        <option value="moonshotai/kimi-k2-0711-preview">Kimi K2 Preview (Moonshot)</option>
+                                        <option value="qwen/qwen3-235b-a22b">Qwen3 Max 235B (阿里)</option>
                                     </optgroup>
                                     <optgroup label="📦 OpenAI 备用">
                                         <option value="gpt-4">GPT-4 (经典)</option>

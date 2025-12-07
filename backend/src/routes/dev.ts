@@ -82,6 +82,93 @@ router.post('/compare', async (req: Request, res: Response) => {
 });
 
 /**
+ * 高级对比模式：支持多个独立配置的并行对比
+ * POST /api/dev/compare-advanced
+ * Body: { 
+ *   sessions: Array<{
+ *     id: string,
+ *     model: string,
+ *     systemPrompt: string,
+ *     userPrompt: string,
+ *     temperature?: number
+ *   }>
+ * }
+ */
+router.post('/compare-advanced', async (req: Request, res: Response) => {
+    const { sessions } = req.body;
+
+    if (!sessions || !Array.isArray(sessions) || sessions.length === 0) {
+        return res.status(400).json({
+            success: false,
+            error: 'Sessions array is required',
+        });
+    }
+
+    try {
+        const startTime = Date.now();
+
+        // 并行执行所有 session 的请求
+        const results = await Promise.allSettled(
+            sessions.map(async (session: any) => {
+                const sessionStartTime = Date.now();
+                try {
+                    const response = await aiService.generateWithCustomPrompts(
+                        session.systemPrompt || '',
+                        session.userPrompt || '',
+                        session.model || 'google/gemini-2.5-flash-preview-09-2025',
+                        session.temperature || 0.7
+                    );
+
+                    return {
+                        id: session.id,
+                        model: session.model,
+                        success: true,
+                        response: response.content,
+                        tokens: response.tokens,
+                        generationTime: Date.now() - sessionStartTime,
+                    };
+                } catch (error) {
+                    return {
+                        id: session.id,
+                        model: session.model,
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                        generationTime: Date.now() - sessionStartTime,
+                    };
+                }
+            })
+        );
+
+        const processedResults = results.map((result) => {
+            if (result.status === 'fulfilled') {
+                return result.value;
+            } else {
+                return {
+                    success: false,
+                    error: result.reason?.message || 'Unknown error',
+                };
+            }
+        });
+
+        const totalTime = Date.now() - startTime;
+
+        res.json({
+            success: true,
+            data: {
+                results: processedResults,
+                totalTime,
+                timestamp: new Date(),
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+/**
  * 创建一个调试会话
  * POST /api/dev/debug-session
  */
@@ -187,100 +274,121 @@ router.get('/debug-session/:sessionId', (req: Request, res: Response) => {
  * GET /api/dev/models
  */
 router.get('/models', (req: Request, res: Response) => {
-  const availableModels = [
-    // OpenRouter 模型
-    {
-      id: 'openai/gpt-5.1-chat',
-      name: 'GPT-5.1',
-      provider: 'OpenRouter (OpenAI)',
-      description: '最新的通用大型语言模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'anthropic/claude-haiku-4.5',
-      name: 'Claude 4.5 Haiku',
-      provider: 'OpenRouter (Anthropic)',
-      description: '小型但强大的推理模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'google/gemini-2.5-flash-preview-09-2025',
-      name: 'Gemini 2.5 Flash',
-      provider: 'OpenRouter (Google)',
-      description: '快速的多模态模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'x-ai/grok-4-fast',
-      name: 'Grok 4 Fast',
-      provider: 'OpenRouter (X AI)',
-      description: '快速推理的模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'qwen/qwen3-next-80b-a3b-instruct',
-      name: 'Qwen3 Next 80B',
-      provider: 'OpenRouter (Alibaba)',
-      description: '阿里大规模语言模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'meituan/longcat-flash-chat:free',
-      name: 'LongCat Flash Chat',
-      provider: 'OpenRouter (Meituan)',
-      description: '长上下文处理能力',
-      category: 'openrouter',
-    },
-    {
-      id: 'deepseek/deepseek-chat-v3.1:free',
-      name: 'DeepSeek V3.1',
-      provider: 'OpenRouter (DeepSeek)',
-      description: '深度学习优化的模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'moonshotai/kimi-k2:free',
-      name: 'Kimi K2',
-      provider: 'OpenRouter (Moonshot)',
-      description: '中文优化的大型模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'thedrummer/anubis-70b-v1.1',
-      name: 'Anubis 70B V1.1',
-      provider: 'OpenRouter (Drummer)',
-      description: '专业优化的70B模型',
-      category: 'openrouter',
-    },
-    {
-      id: 'thedrummer/skyfall-36b-v2',
-      name: 'Skyfall 36B V2',
-      provider: 'OpenRouter (Drummer)',
-      description: '平衡性能与效率的模型',
-      category: 'openrouter',
-    },
-    // OpenAI 模型（备用）
-    {
-      id: 'gpt-4',
-      name: 'GPT-4',
-      provider: 'OpenAI',
-      description: '强大的通用模型',
-      category: 'openai',
-    },
-    {
-      id: 'gpt-3.5-turbo',
-      name: 'GPT-3.5 Turbo',
-      provider: 'OpenAI',
-      description: '快速且成本效益高',
-      category: 'openai',
-    },
-  ];
+    const availableModels = [
+        // OpenRouter 模型
+        {
+            id: 'openai/gpt-5.1-chat',
+            name: 'GPT-5.1',
+            provider: 'OpenRouter (OpenAI)',
+            description: '最新的通用大型语言模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'anthropic/claude-haiku-4.5',
+            name: 'Claude 4.5 Haiku',
+            provider: 'OpenRouter (Anthropic)',
+            description: '小型但强大的推理模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'google/gemini-2.5-flash-preview-09-2025',
+            name: 'Gemini 2.5 Flash',
+            provider: 'OpenRouter (Google)',
+            description: '快速的多模态模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'x-ai/grok-4-fast',
+            name: 'Grok 4 Fast',
+            provider: 'OpenRouter (X AI)',
+            description: '快速推理的模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'qwen/qwen3-next-80b-a3b-instruct',
+            name: 'Qwen3 Next 80B',
+            provider: 'OpenRouter (Alibaba)',
+            description: '阿里大规模语言模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'meituan/longcat-flash-chat:free',
+            name: 'LongCat Flash Chat',
+            provider: 'OpenRouter (Meituan)',
+            description: '长上下文处理能力',
+            category: 'openrouter',
+        },
+        {
+            id: 'deepseek/deepseek-chat-v3.1:free',
+            name: 'DeepSeek V3.1',
+            provider: 'OpenRouter (DeepSeek)',
+            description: '深度学习优化的模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'moonshotai/kimi-k2:free',
+            name: 'Kimi K2',
+            provider: 'OpenRouter (Moonshot)',
+            description: '中文优化的大型模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'thedrummer/anubis-70b-v1.1',
+            name: 'Anubis 70B V1.1',
+            provider: 'OpenRouter (Drummer)',
+            description: '专业优化的70B模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'thedrummer/skyfall-36b-v2',
+            name: 'Skyfall 36B V2',
+            provider: 'OpenRouter (Drummer)',
+            description: '平衡性能与效率的模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'zhipu/glm-4.6-flash',
+            name: 'GLM-4.6 Flash',
+            provider: 'OpenRouter (智谱)',
+            description: '智谱最新旗舰模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'moonshotai/kimi-k2-0711-preview',
+            name: 'Kimi K2 Preview',
+            provider: 'OpenRouter (Moonshot)',
+            description: 'Moonshot 最新中文大模型',
+            category: 'openrouter',
+        },
+        {
+            id: 'qwen/qwen3-235b-a22b',
+            name: 'Qwen3 Max 235B',
+            provider: 'OpenRouter (阿里)',
+            description: '通义千问最大规模模型',
+            category: 'openrouter',
+        },
+        // OpenAI 模型（备用）
+        {
+            id: 'gpt-4',
+            name: 'GPT-4',
+            provider: 'OpenAI',
+            description: '强大的通用模型',
+            category: 'openai',
+        },
+        {
+            id: 'gpt-3.5-turbo',
+            name: 'GPT-3.5 Turbo',
+            provider: 'OpenAI',
+            description: '快速且成本效益高',
+            category: 'openai',
+        },
+    ];
 
-  res.json({
-    success: true,
-    data: availableModels,
-    total: availableModels.length,
-  });
+    res.json({
+        success: true,
+        data: availableModels,
+        total: availableModels.length,
+    });
 });
 
 export default router;

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { gameApi, scriptApi } from '@/lib/api';
 import { useGameStore } from '@/lib/store';
 import GamePlayMode from '@/components/game/GamePlayMode';
+import CompareMode from '@/components/game/CompareMode';
 
 export default function GamePage() {
     const params = useParams();
@@ -28,11 +29,11 @@ export default function GamePage() {
     const loadGameData = async () => {
         try {
             setLoading(true);
-            
+
             // 第一步：加载 session
             const sessionRes = await gameApi.getSession(sessionId);
             let sessionData = sessionRes.data;
-            
+
             // 立即设置 session，这样至少前端已经有会话数据
             setSession(sessionData);
 
@@ -41,7 +42,7 @@ export default function GamePage() {
                 console.log('📖 开始加载脚本详情，scriptId:', sessionData.scriptId);
                 const scriptRes = await scriptApi.getScriptDetail(sessionData.scriptId);
                 const scriptData = scriptRes.data;
-                
+
                 console.log('✅ 脚本详情加载完成:', scriptData.title);
                 setScript(scriptData);
 
@@ -58,11 +59,11 @@ export default function GamePage() {
                 if (!sessionData.userCharacterInfo && scriptData) {
                     const firstRole = scriptData?.角色池?.[0];
                     const firstDetail = scriptData?.角色详细设定?.[0];
-                    
+
                     console.log('🔍 生成单人剧本的 userCharacterInfo:');
                     console.log('  firstRole:', firstRole?.姓名);
                     console.log('  firstDetail:', firstDetail?.角色简介);
-                    
+
                     if (firstRole && firstDetail) {
                         sessionData.userCharacterInfo = {
                             scriptRoleId: firstRole.roleId,
@@ -73,7 +74,7 @@ export default function GamePage() {
                             第一个选择点: firstDetail.第一个选择点,
                             预置策略选项: firstDetail.预置策略选项,
                         };
-                        
+
                         // 更新 session 中的 userCharacterInfo
                         setSession({ ...sessionData });
                     }
@@ -121,14 +122,25 @@ export default function GamePage() {
 
             {/* 游戏主内容 */}
             <AnimatePresence mode="wait">
-                <GamePlayMode
-                    key={gameMode === 'normal' ? 'game-play' : 'compare-play'}
-                    sessionId={sessionId}
-                    script={script}
-                    characters={characters}
-                    session={session}
-                    onSessionUpdate={setSession}
-                />
+                {gameMode === 'compare' ? (
+                    <CompareMode
+                        key="compare-mode"
+                        sessionId={sessionId}
+                        script={script}
+                        characters={characters}
+                        session={session}
+                        onSessionUpdate={setSession}
+                    />
+                ) : (
+                    <GamePlayMode
+                        key="game-play"
+                        sessionId={sessionId}
+                        script={script}
+                        characters={characters}
+                        session={session}
+                        onSessionUpdate={setSession}
+                    />
+                )}
             </AnimatePresence>
         </main>
     );

@@ -298,6 +298,26 @@ ${characterDescriptions}
     }
 
     /**
+     * 使用自定义 prompt 生成内容（用于对比模式）
+     */
+    async generateWithCustomPrompts(
+        systemPrompt: string,
+        userPrompt: string,
+        model: string = 'google/gemini-2.5-flash-preview-09-2025',
+        temperature: number = 0.7
+    ): Promise<{ content: string; tokens: number }> {
+        const messages: Array<{ role: string; content: string }> = [];
+
+        if (systemPrompt && systemPrompt.trim()) {
+            messages.push({ role: 'system', content: systemPrompt });
+        }
+
+        messages.push({ role: 'user', content: userPrompt || '请根据上下文继续故事。' });
+
+        return await this.callOpenRouter(model, messages, temperature, 2000);
+    }
+
+    /**
      * 调试模式：测试单个提示词
      */
     async debugPrompt(

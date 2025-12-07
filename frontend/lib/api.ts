@@ -168,6 +168,22 @@ export const devApi = {
     },
 
     /**
+     * 高级对比模式：支持多个独立配置的并行对比
+     */
+    compareAdvanced: async (sessions: Array<{
+        id: string;
+        model: string;
+        systemPrompt: string;
+        userPrompt: string;
+        temperature?: number;
+    }>) => {
+        const response = await api.post('/dev/compare-advanced', {
+            sessions,
+        });
+        return response.data;
+    },
+
+    /**
      * 创建调试会话
      */
     createDebugSession: async () => {
