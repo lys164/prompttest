@@ -70,6 +70,7 @@ export default function CompareMode({
     const [userCharacterInfo, setUserCharacterInfo] = useState<any>(null);
     const [selectedOption, setSelectedOption] = useState<any>(null);
     const [gameStarted, setGameStarted] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
     const [defaultSystemPrompt, setDefaultSystemPrompt] = useState('');
 
     // 3个session的配置
@@ -88,10 +89,16 @@ export default function CompareMode({
     }, [sessionId, session]);
 
     const initializeCompareMode = async () => {
+        console.log('🔧 CompareMode 初始化开始');
+
         // 检查是否有用户角色信息
         if (session?.userCharacterInfo) {
+            console.log('✅ 找到 userCharacterInfo:', session.userCharacterInfo.scriptCharacterName);
             setUserCharacterInfo(session.userCharacterInfo);
+        } else {
+            console.log('⚠️ 没有 userCharacterInfo');
         }
+
         // 确保初始状态不是已开始
         setGameStarted(false);
 
@@ -101,10 +108,15 @@ export default function CompareMode({
             if (promptRes?.data?.systemPrompt) {
                 setDefaultSystemPrompt(promptRes.data.systemPrompt);
                 setUnifiedPrompt(promptRes.data.systemPrompt);
+                console.log('✅ 获取到默认 system prompt');
             }
         } catch (error) {
             console.warn('Failed to get default system prompt:', error);
         }
+
+        // 标记初始化完成
+        setIsInitialized(true);
+        console.log('✅ CompareMode 初始化完成');
     };
 
     // 更新单个session的配置
@@ -246,6 +258,22 @@ export default function CompareMode({
 
     // 用户自定义输入（当没有预置策略时）
     const [customUserInput, setCustomUserInput] = useState('');
+
+    // 加载中状态
+    if (!isInitialized) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                <div className="flex flex-col items-center justify-center min-h-64">
+                    <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                        className="w-12 h-12 border-4 border-gray-700 border-t-orange-500 rounded-full mb-4"
+                    />
+                    <p className="text-gray-400">正在加载对比模式配置...</p>
+                </div>
+            </div>
+        );
+    }
 
     // 初始化界面：配置模型和 System Prompt
     if (!gameStarted) {
@@ -395,8 +423,8 @@ export default function CompareMode({
                                                 whileTap={{ scale: 0.99 }}
                                                 onClick={() => handleOptionSelect(normalizedOption)}
                                                 className={`w-full text-left p-4 rounded-lg border-2 transition ${isSelected
-                                                        ? 'bg-gradient-to-r from-orange-600 to-yellow-600 border-orange-400'
-                                                        : 'bg-gray-900 border-gray-700 hover:border-gray-600'
+                                                    ? 'bg-gradient-to-r from-orange-600 to-yellow-600 border-orange-400'
+                                                    : 'bg-gray-900 border-gray-700 hover:border-gray-600'
                                                     }`}
                                             >
                                                 <p className="font-bold text-white">
@@ -436,7 +464,7 @@ export default function CompareMode({
                                     placeholder="输入用户提示内容，例如：用户选择了继续调查照片中的线索..."
                                     className="w-full h-32 bg-gray-900 text-white rounded-lg p-4 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 />
-                                
+
                                 {/* 确认按钮 */}
                                 {customUserInput.trim() && (
                                     <motion.button
