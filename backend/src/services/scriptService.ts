@@ -366,8 +366,56 @@ export class ScriptService {
         console.log('📖 [mapFirebaseScript] 映射剧本:', doc.id);
         console.log('  📋 Firebase 文档的所有字段:', Object.keys(data));
 
-        // 🔍 获取角色数据 - 优先从角色网络.节点获取，否则从角色池获取
-        let rolePoolData = data.角色池 || data.角色网络?.节点 || [];
+        // 🔍 获取角色详细设定 - 可能是对象格式 {"{{角色名}}": {...}} 或数组格式
+        let roleDetailsMap: { [key: string]: any } = {};
+        const rawRoleDetails = data.角色详细设定;
+        
+        if (rawRoleDetails && typeof rawRoleDetails === 'object' && !Array.isArray(rawRoleDetails)) {
+            // 对象格式：{"{{AI修复师}}": {...}, "{{竞争对手}}": {...}}
+            console.log('  📋 角色详细设定是对象格式，key 数量:', Object.keys(rawRoleDetails).length);
+            roleDetailsMap = rawRoleDetails;
+        } else if (Array.isArray(rawRoleDetails)) {
+            // 数组格式：[{roleId: "...", ...}, ...]
+            console.log('  📋 角色详细设定是数组格式，长度:', rawRoleDetails.length);
+            rawRoleDetails.forEach((detail: any) => {
+                if (detail.roleId) {
+                    roleDetailsMap[detail.roleId] = detail;
+                }
+            });
+        }
+
+        // 🔍 获取角色数据 - 优先从角色网络.节点获取
+        let rolePoolData: any[] = [];
+        const networkNodes = data.角色网络?.节点;
+        
+        if (Array.isArray(networkNodes) && networkNodes.length > 0) {
+            console.log('  📋 从角色网络.节点构建角色池:', networkNodes);
+            
+            rolePoolData = networkNodes.map((node: any, index: number) => {
+                // 节点可能是字符串 "{{AI修复师}}" 或对象
+                let roleName = typeof node === 'string' ? node : (node.姓名 || node.name || `角色${index + 1}`);
+                // 去掉 {{ }} 包裹
+                const cleanName = roleName.replace(/^\{\{|\}\}$/g, '');
+                const roleKey = roleName; // 保留原始 key 用于查找详细设定
+                
+                // 从 roleDetailsMap 中获取详细设定
+                const detail = roleDetailsMap[roleKey] || roleDetailsMap[cleanName] || {};
+                
+                return {
+                    id: `role-${doc.id}-${index}`,
+                    roleId: cleanName,
+                    姓名: cleanName,
+                    角色简介: detail.角色简介 || '',
+                    角色目标: detail.角色目标 || '',
+                    角色视角的故事背景: detail.角色视角的故事背景 || '',
+                    第一个选择点: detail.第一个选择点 || '',
+                    预置策略选项: Array.isArray(detail.预置策略选项) ? detail.预置策略选项 : [],
+                };
+            });
+        } else if (data.角色池 && Array.isArray(data.角色池)) {
+            // 使用原始角色池数据
+            rolePoolData = data.角色池;
+        }
 
         // ✨ 检测剧本中是否使用了角色变量（如 {{角色A}}, {{角色B}}）
         const scriptText = JSON.stringify(data);
@@ -387,15 +435,16 @@ export class ScriptService {
                 const existingRole = rolePoolData.find((r: any) => r.roleId === varName || r.姓名 === varName);
                 if (!existingRole) {
                     console.log(`  ➕ 为变量 ${varName} 创建角色条目`);
+                    const detail = roleDetailsMap[`{{${varName}}}`] || roleDetailsMap[varName] || {};
                     rolePoolData.push({
                         id: varName,
-                        roleId: varName,  // 关键：roleId 直接用变量名
+                        roleId: varName,
                         姓名: varName,
-                        角色简介: `剧本中的 ${varName} 变量角色`,
-                        角色目标: '',
-                        角色视角的故事背景: data.角色视角的故事背景 || '',
-                        第一个选择点: data.第一个选择点 || '',
-                        预置策略选项: Array.isArray(data.预置策略选项) ? data.预置策略选项 : [],
+                        角色简介: detail.角色简介 || `剧本中的 ${varName} 变量角色`,
+                        角色目标: detail.角色目标 || '',
+                        角色视角的故事背景: detail.角色视角的故事背景 || data.角色视角的故事背景 || '',
+                        第一个选择点: detail.第一个选择点 || data.第一个选择点 || '',
+                        预置策略选项: Array.isArray(detail.预置策略选项) ? detail.预置策略选项 : [],
                     });
                 }
             });
@@ -405,21 +454,11 @@ export class ScriptService {
         if (!rolePoolData || rolePoolData.length === 0) {
             console.log('  ⚠️ 没有找到角色池或角色网络.节点，使用文档本身作为角色数据');
 
-            // 调试：打印预置策略选项的原始数据
-            const rawOptions = data.预置策略选项;
-            console.log('  🔍 原始预置策略选项:', rawOptions);
-            if (rawOptions && typeof rawOptions === 'object') {
-                console.log('  🔍 预置策略选项类型:', Array.isArray(rawOptions) ? 'array' : 'object');
-                if (Array.isArray(rawOptions) && rawOptions.length > 0) {
-                    console.log('  🔍 第一个选项:', JSON.stringify(rawOptions[0]));
-                }
-            }
-
             const fallbackRoleId = 'player-role-0';
             rolePoolData = [{
                 id: fallbackRoleId,
                 roleId: fallbackRoleId,
-                姓名: data.主角名称 || '主角', // 默认名称，可根据需要扩展
+                姓名: data.主角名称 || '主角',
                 角色简介: '故事的主角',
                 角色目标: '',
                 角色视角的故事背景: data.角色视角的故事背景 || '',
@@ -428,29 +467,32 @@ export class ScriptService {
             }];
         }
 
-        // 🔍 获取角色详细设定 - 可能在多个字段中
-        let roleDetailsData = data.角色详细设定 || [];
-
-        // 如果没有角色详细设定，则尝试基于角色池构造
-        if (!roleDetailsData || roleDetailsData.length === 0) {
-            if (rolePoolData && rolePoolData.length > 0) {
-                console.log('  ⚠️ 没有找到角色详细设定，基于角色池构造默认设定');
-                roleDetailsData = rolePoolData.map((char: any, index: number) => {
-                    const derivedRoleId = char.roleId || char.id || `role-${doc.id}-${index}`;
-        return {
-                        roleId: derivedRoleId,
-                        角色简介: char.角色简介 || '故事的主角',
-                        角色目标: char.角色目标 || '',
-                        角色视角的故事背景: char.角色视角的故事背景 || data.角色视角的故事背景 || '',
-                        第一个选择点: char.第一个选择点 || data.第一个选择点 || '',
-                        预置策略选项: Array.isArray(char.预置策略选项)
-                            ? char.预置策略选项
-                            : Array.isArray(data.预置策略选项)
-                                ? data.预置策略选项
-                                : [],
-                    };
-                });
-            }
+        // 🔍 构建角色详细设定数组
+        let roleDetailsData: any[] = [];
+        
+        // 从 roleDetailsMap 或 rolePoolData 构建
+        if (Object.keys(roleDetailsMap).length > 0) {
+            roleDetailsData = Object.entries(roleDetailsMap).map(([key, detail]: [string, any], index) => {
+                const cleanName = key.replace(/^\{\{|\}\}$/g, '');
+                return {
+                    roleId: cleanName,
+                    角色简介: detail.角色简介 || '',
+                    角色目标: detail.角色目标 || '',
+                    角色视角的故事背景: detail.角色视角的故事背景 || '',
+                    第一个选择点: detail.第一个选择点 || '',
+                    预置策略选项: Array.isArray(detail.预置策略选项) ? detail.预置策略选项 : [],
+                };
+            });
+        } else if (rolePoolData && rolePoolData.length > 0) {
+            // 基于角色池构造
+            roleDetailsData = rolePoolData.map((char: any, index: number) => ({
+                roleId: char.roleId || char.id || `role-${doc.id}-${index}`,
+                角色简介: char.角色简介 || '故事的主角',
+                角色目标: char.角色目标 || '',
+                角色视角的故事背景: char.角色视角的故事背景 || data.角色视角的故事背景 || '',
+                第一个选择点: char.第一个选择点 || data.第一个选择点 || '',
+                预置策略选项: Array.isArray(char.预置策略选项) ? char.预置策略选项 : [],
+            }));
         }
 
         // 如果依然没有，最后再以文档自身作为单个角色详设
