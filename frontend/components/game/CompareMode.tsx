@@ -91,8 +91,9 @@ export default function CompareMode({
         // 检查是否有用户角色信息
         if (session?.userCharacterInfo) {
             setUserCharacterInfo(session.userCharacterInfo);
-            setGameStarted(false);
         }
+        // 确保初始状态不是已开始
+        setGameStarted(false);
 
         // 获取默认的 system prompt
         try {
@@ -150,10 +151,21 @@ export default function CompareMode({
         setSelectedOption(option);
     };
 
+    // 自定义输入确认
+    const handleCustomConfirm = async () => {
+        const option = { id: 'custom', 文本: customUserInput };
+        setSelectedOption(option);
+        await runComparison(option.文本);
+    };
+
     // 确认选择，同时运行3个session
     const handleConfirmSelection = async () => {
         if (!selectedOption) return;
+        await runComparison(selectedOption.文本);
+    };
 
+    // 执行对比
+    const runComparison = async (userInput: string) => {
         setGameStarted(true);
 
         // 设置所有 session 为加载状态
@@ -163,7 +175,7 @@ export default function CompareMode({
 
         try {
             // 构建用户提示
-            const userPrompt = `用户选择了：${selectedOption.文本}\n\n请根据这个选择生成故事的下一步发展。`;
+            const userPrompt = `用户选择了：${userInput}\n\n请根据这个选择生成故事的下一步发展。`;
 
             // 使用高级对比 API 并行调用所有模型
             const compareResponse = await devApi.compareAdvanced(
@@ -232,8 +244,11 @@ export default function CompareMode({
         setUnifiedPrompt(defaultSystemPrompt);
     };
 
-    // 初始化界面：选择策略
-    if (!gameStarted && userCharacterInfo) {
+    // 用户自定义输入（当没有预置策略时）
+    const [customUserInput, setCustomUserInput] = useState('');
+
+    // 初始化界面：配置模型和 System Prompt
+    if (!gameStarted) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <motion.div
@@ -341,68 +356,99 @@ export default function CompareMode({
 
                     {/* 角色信息和策略选择 */}
                     <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                        <h3 className="text-xl font-bold text-white mb-4">
-                            🎭 你将扮演：<span className="text-blue-400">{userCharacterInfo.scriptCharacterName}</span>
-                        </h3>
+                        {userCharacterInfo ? (
+                            <>
+                                <h3 className="text-xl font-bold text-white mb-4">
+                                    🎭 你将扮演：<span className="text-blue-400">{userCharacterInfo.scriptCharacterName}</span>
+                                </h3>
 
-                        {/* 故事背景 */}
-                        <div className="bg-gray-900 rounded-lg p-4 mb-6 border border-gray-700">
-                            <h4 className="text-lg font-bold text-green-400 mb-2">🌍 故事背景</h4>
-                            <p className="text-gray-300 text-sm whitespace-pre-wrap">
-                                {replaceCharacterVariables(userCharacterInfo.角色视角的故事背景)}
-                            </p>
-                        </div>
+                                {/* 故事背景 */}
+                                <div className="bg-gray-900 rounded-lg p-4 mb-6 border border-gray-700">
+                                    <h4 className="text-lg font-bold text-green-400 mb-2">🌍 故事背景</h4>
+                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">
+                                        {replaceCharacterVariables(userCharacterInfo.角色视角的故事背景)}
+                                    </p>
+                                </div>
 
-                        {/* 选择点 */}
-                        <div className="bg-yellow-900/20 rounded-lg p-4 mb-6 border border-yellow-700/50">
-                            <h4 className="text-lg font-bold text-yellow-400 mb-2">❓ 面临的选择</h4>
-                            <p className="text-gray-300">
-                                {replaceCharacterVariables(userCharacterInfo.第一个选择点)}
-                            </p>
-                        </div>
+                                {/* 选择点 */}
+                                <div className="bg-yellow-900/20 rounded-lg p-4 mb-6 border border-yellow-700/50">
+                                    <h4 className="text-lg font-bold text-yellow-400 mb-2">❓ 面临的选择</h4>
+                                    <p className="text-gray-300">
+                                        {replaceCharacterVariables(userCharacterInfo.第一个选择点)}
+                                    </p>
+                                </div>
 
-                        {/* 策略选项 */}
-                        <div className="space-y-3">
-                            <h4 className="text-lg font-bold text-white">💡 选择你的策略：</h4>
-                            {userCharacterInfo.预置策略选项?.map((option: any, index: number) => {
-                                const normalizedOption = typeof option === 'string'
-                                    ? { id: `preset-${index}`, 文本: replaceCharacterVariables(option), 后果描述: '' }
-                                    : { ...option, id: option.id || `preset-${index}`, 文本: replaceCharacterVariables(option.文本 || ''), 后果描述: replaceCharacterVariables(option.后果描述 || '') };
+                                {/* 策略选项 */}
+                                <div className="space-y-3">
+                                    <h4 className="text-lg font-bold text-white">💡 选择你的策略：</h4>
+                                    {userCharacterInfo.预置策略选项?.map((option: any, index: number) => {
+                                        const normalizedOption = typeof option === 'string'
+                                            ? { id: `preset-${index}`, 文本: replaceCharacterVariables(option), 后果描述: '' }
+                                            : { ...option, id: option.id || `preset-${index}`, 文本: replaceCharacterVariables(option.文本 || ''), 后果描述: replaceCharacterVariables(option.后果描述 || '') };
 
-                                const isSelected = selectedOption?.id === normalizedOption.id;
+                                        const isSelected = selectedOption?.id === normalizedOption.id;
 
-                                return (
+                                        return (
+                                            <motion.button
+                                                key={normalizedOption.id}
+                                                whileHover={{ scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                                onClick={() => handleOptionSelect(normalizedOption)}
+                                                className={`w-full text-left p-4 rounded-lg border-2 transition ${isSelected
+                                                        ? 'bg-gradient-to-r from-orange-600 to-yellow-600 border-orange-400'
+                                                        : 'bg-gray-900 border-gray-700 hover:border-gray-600'
+                                                    }`}
+                                            >
+                                                <p className="font-bold text-white">
+                                                    {isSelected && '✓ '}{normalizedOption.文本}
+                                                </p>
+                                                {normalizedOption.后果描述 && (
+                                                    <p className="text-sm text-gray-400 mt-1">{normalizedOption.后果描述}</p>
+                                                )}
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* 确认按钮 */}
+                                {selectedOption && (
                                     <motion.button
-                                        key={normalizedOption.id}
-                                        whileHover={{ scale: 1.01 }}
-                                        whileTap={{ scale: 0.99 }}
-                                        onClick={() => handleOptionSelect(normalizedOption)}
-                                        className={`w-full text-left p-4 rounded-lg border-2 transition ${isSelected
-                                                ? 'bg-gradient-to-r from-orange-600 to-yellow-600 border-orange-400'
-                                                : 'bg-gray-900 border-gray-700 hover:border-gray-600'
-                                            }`}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        onClick={handleConfirmSelection}
+                                        className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white font-bold text-lg rounded-lg shadow-lg transition"
                                     >
-                                        <p className="font-bold text-white">
-                                            {isSelected && '✓ '}{normalizedOption.文本}
-                                        </p>
-                                        {normalizedOption.后果描述 && (
-                                            <p className="text-sm text-gray-400 mt-1">{normalizedOption.后果描述}</p>
-                                        )}
+                                        🚀 开始对比 (同时运行3个模型)
                                     </motion.button>
-                                );
-                            })}
-                        </div>
-
-                        {/* 确认按钮 */}
-                        {selectedOption && (
-                            <motion.button
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                onClick={handleConfirmSelection}
-                                className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white font-bold text-lg rounded-lg shadow-lg transition"
-                            >
-                                🚀 开始对比 (同时运行3个模型)
-                            </motion.button>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="text-xl font-bold text-white mb-4">
+                                    💬 输入用户提示 (User Prompt)
+                                </h3>
+                                <p className="text-gray-400 text-sm mb-4">
+                                    输入你想要测试的用户提示内容，将会使用上面配置的 System Prompt 和模型进行对比。
+                                </p>
+                                <textarea
+                                    value={customUserInput}
+                                    onChange={(e) => setCustomUserInput(e.target.value)}
+                                    placeholder="输入用户提示内容，例如：用户选择了继续调查照片中的线索..."
+                                    className="w-full h-32 bg-gray-900 text-white rounded-lg p-4 border border-gray-700 focus:border-blue-500 focus:outline-none"
+                                />
+                                
+                                {/* 确认按钮 */}
+                                {customUserInput.trim() && (
+                                    <motion.button
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        onClick={() => handleCustomConfirm()}
+                                        className="w-full mt-6 px-6 py-4 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white font-bold text-lg rounded-lg shadow-lg transition"
+                                    >
+                                        🚀 开始对比 (同时运行3个模型)
+                                    </motion.button>
+                                )}
+                            </>
                         )}
                     </div>
                 </motion.div>
