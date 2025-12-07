@@ -303,7 +303,7 @@ ${characterDescriptions}
     async generateWithCustomPrompts(
         systemPrompt: string,
         userPrompt: string,
-        model: string = 'google/gemini-2.5-flash-preview-09-2025',
+        model: string = 'google/gemini-flash-1.5',
         temperature: number = 0.7
     ): Promise<{ content: string; tokens: number }> {
         const messages: Array<{ role: string; content: string }> = [];
@@ -362,7 +362,7 @@ ${characterDescriptions}
         models: string[] = [
             'openai/gpt-4-turbo',
             'anthropic/claude-haiku-4.5',
-            'google/gemini-2.5-flash-preview-09-2025',
+            'google/gemini-flash-1.5',
         ]
     ): Promise<Array<{ model: string; response: string; tokens: number; time: number }>> {
         const results = await Promise.all(

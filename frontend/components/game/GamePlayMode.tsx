@@ -37,7 +37,7 @@ export default function GamePlayMode({
     // 调试面板状态
     const [showDebugPanel, setShowDebugPanel] = useState(false);
     const [systemPromptOverride, setSystemPromptOverride] = useState('');
-    const [selectedModel, setSelectedModel] = useState('google/gemini-2.5-flash-preview-09-2025');
+    const [selectedModel, setSelectedModel] = useState('google/gemini-flash-1.5');
     const [currentSystemPrompt, setCurrentSystemPrompt] = useState('');
 
     useEffect(() => {
@@ -758,25 +758,23 @@ export default function GamePlayMode({
                                     className="w-full bg-gray-800 text-gray-200 rounded-lg p-3 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 >
                                     <optgroup label="🔥 推荐模型">
-                                        <option value="google/gemini-2.5-flash-preview-09-2025">Gemini 2.5 Flash (快速多模态)</option>
-                                        <option value="openai/gpt-5.1-chat">GPT-5.1 (最新通用)</option>
-                                        <option value="anthropic/claude-haiku-4.5">Claude 4.5 Haiku (推理)</option>
+                                        <option value="google/gemini-flash-1.5">Gemini 1.5 Flash</option>
+                                        <option value="google/gemini-pro-1.5">Gemini 1.5 Pro</option>
+                                        <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+                                        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
                                     </optgroup>
-                                    <optgroup label="🚀 OpenRouter 模型">
-                                        <option value="x-ai/grok-4-fast">Grok 4 Fast (快速推理)</option>
-                                        <option value="qwen/qwen3-next-80b-a3b-instruct">Qwen3 Next 80B (阿里)</option>
-                                        <option value="meituan/longcat-flash-chat:free">LongCat Flash (长上下文)</option>
-                                        <option value="deepseek/deepseek-chat-v3.1:free">DeepSeek V3.1 (深度优化)</option>
-                                        <option value="moonshotai/kimi-k2:free">Kimi K2 (中文优化)</option>
-                                        <option value="thedrummer/anubis-70b-v1.1">Anubis 70B V1.1 (专业)</option>
-                                        <option value="thedrummer/skyfall-36b-v2">Skyfall 36B V2 (平衡)</option>
-                                        <option value="zhipu/glm-4.6-flash">GLM-4.6 Flash (智谱)</option>
-                                        <option value="moonshotai/kimi-k2-0711-preview">Kimi K2 Preview (Moonshot)</option>
-                                        <option value="qwen/qwen3-235b-a22b">Qwen3 Max 235B (阿里)</option>
+                                    <optgroup label="🚀 免费模型">
+                                        <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (免费)</option>
+                                        <option value="google/gemma-2-9b-it:free">Gemma 2 9B (免费)</option>
+                                        <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (免费)</option>
+                                        <option value="qwen/qwen-2-7b-instruct:free">Qwen 2 7B (免费)</option>
                                     </optgroup>
-                                    <optgroup label="📦 OpenAI 备用">
-                                        <option value="gpt-4">GPT-4 (经典)</option>
-                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo (高效)</option>
+                                    <optgroup label="💎 高级模型">
+                                        <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+                                        <option value="openai/gpt-4o">GPT-4o</option>
+                                        <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+                                        <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+                                        <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
                                     </optgroup>
                                 </select>
                             </div>
@@ -786,7 +784,7 @@ export default function GamePlayMode({
                                 <button
                                     onClick={() => {
                                         setSystemPromptOverride('');
-                                        setSelectedModel('google/gemini-2.5-flash-preview-09-2025');
+                                        setSelectedModel('google/gemini-flash-1.5');
                                     }}
                                     className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition"
                                 >

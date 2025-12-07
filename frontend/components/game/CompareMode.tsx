@@ -25,37 +25,35 @@ interface SessionConfig {
 }
 
 const DEFAULT_MODELS = [
-    'google/gemini-2.5-flash-preview-09-2025',
-    'anthropic/claude-haiku-4.5',
-    'deepseek/deepseek-chat-v3.1:free',
+    'google/gemini-flash-1.5',
+    'anthropic/claude-3-haiku',
+    'deepseek/deepseek-chat',
 ];
 
 const MODEL_OPTIONS = [
     {
         group: '🔥 推荐模型', options: [
-            { value: 'google/gemini-2.5-flash-preview-09-2025', label: 'Gemini 2.5 Flash' },
-            { value: 'openai/gpt-5.1-chat', label: 'GPT-5.1' },
-            { value: 'anthropic/claude-haiku-4.5', label: 'Claude 4.5 Haiku' },
+            { value: 'google/gemini-flash-1.5', label: 'Gemini 1.5 Flash' },
+            { value: 'google/gemini-pro-1.5', label: 'Gemini 1.5 Pro' },
+            { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku' },
+            { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
         ]
     },
     {
-        group: '🚀 OpenRouter', options: [
-            { value: 'x-ai/grok-4-fast', label: 'Grok 4 Fast' },
-            { value: 'qwen/qwen3-next-80b-a3b-instruct', label: 'Qwen3 Next 80B' },
-            { value: 'meituan/longcat-flash-chat:free', label: 'LongCat Flash (免费)' },
-            { value: 'deepseek/deepseek-chat-v3.1:free', label: 'DeepSeek V3.1 (免费)' },
-            { value: 'moonshotai/kimi-k2:free', label: 'Kimi K2 (免费)' },
-            { value: 'thedrummer/anubis-70b-v1.1', label: 'Anubis 70B' },
-            { value: 'thedrummer/skyfall-36b-v2', label: 'Skyfall 36B' },
-            { value: 'zhipu/glm-4.6-flash', label: 'GLM-4.6 Flash' },
-            { value: 'moonshotai/kimi-k2-0711-preview', label: 'Kimi K2 Preview' },
-            { value: 'qwen/qwen3-235b-a22b', label: 'Qwen3 Max 235B' },
+        group: '🚀 免费模型', options: [
+            { value: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B (免费)' },
+            { value: 'google/gemma-2-9b-it:free', label: 'Gemma 2 9B (免费)' },
+            { value: 'mistralai/mistral-7b-instruct:free', label: 'Mistral 7B (免费)' },
+            { value: 'qwen/qwen-2-7b-instruct:free', label: 'Qwen 2 7B (免费)' },
         ]
     },
     {
-        group: '📦 OpenAI', options: [
-            { value: 'gpt-4', label: 'GPT-4' },
-            { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+        group: '💎 高级模型', options: [
+            { value: 'openai/gpt-4-turbo', label: 'GPT-4 Turbo' },
+            { value: 'openai/gpt-4o', label: 'GPT-4o' },
+            { value: 'anthropic/claude-3-opus', label: 'Claude 3 Opus' },
+            { value: 'deepseek/deepseek-chat', label: 'DeepSeek Chat' },
+            { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' },
         ]
     },
 ];

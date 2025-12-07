@@ -115,7 +115,7 @@ router.post('/compare-advanced', async (req: Request, res: Response) => {
                     const response = await aiService.generateWithCustomPrompts(
                         session.systemPrompt || '',
                         session.userPrompt || '',
-                        session.model || 'google/gemini-2.5-flash-preview-09-2025',
+                        session.model || 'google/gemini-flash-1.5',
                         session.temperature || 0.7
                     );
 
@@ -274,115 +274,102 @@ router.get('/debug-session/:sessionId', (req: Request, res: Response) => {
  * GET /api/dev/models
  */
 router.get('/models', (req: Request, res: Response) => {
-    const availableModels = [
-        // OpenRouter 模型
-        {
-            id: 'openai/gpt-5.1-chat',
-            name: 'GPT-5.1',
-            provider: 'OpenRouter (OpenAI)',
-            description: '最新的通用大型语言模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'anthropic/claude-haiku-4.5',
-            name: 'Claude 4.5 Haiku',
-            provider: 'OpenRouter (Anthropic)',
-            description: '小型但强大的推理模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'google/gemini-2.5-flash-preview-09-2025',
-            name: 'Gemini 2.5 Flash',
-            provider: 'OpenRouter (Google)',
-            description: '快速的多模态模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'x-ai/grok-4-fast',
-            name: 'Grok 4 Fast',
-            provider: 'OpenRouter (X AI)',
-            description: '快速推理的模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'qwen/qwen3-next-80b-a3b-instruct',
-            name: 'Qwen3 Next 80B',
-            provider: 'OpenRouter (Alibaba)',
-            description: '阿里大规模语言模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'meituan/longcat-flash-chat:free',
-            name: 'LongCat Flash Chat',
-            provider: 'OpenRouter (Meituan)',
-            description: '长上下文处理能力',
-            category: 'openrouter',
-        },
-        {
-            id: 'deepseek/deepseek-chat-v3.1:free',
-            name: 'DeepSeek V3.1',
-            provider: 'OpenRouter (DeepSeek)',
-            description: '深度学习优化的模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'moonshotai/kimi-k2:free',
-            name: 'Kimi K2',
-            provider: 'OpenRouter (Moonshot)',
-            description: '中文优化的大型模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'thedrummer/anubis-70b-v1.1',
-            name: 'Anubis 70B V1.1',
-            provider: 'OpenRouter (Drummer)',
-            description: '专业优化的70B模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'thedrummer/skyfall-36b-v2',
-            name: 'Skyfall 36B V2',
-            provider: 'OpenRouter (Drummer)',
-            description: '平衡性能与效率的模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'zhipu/glm-4.6-flash',
-            name: 'GLM-4.6 Flash',
-            provider: 'OpenRouter (智谱)',
-            description: '智谱最新旗舰模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'moonshotai/kimi-k2-0711-preview',
-            name: 'Kimi K2 Preview',
-            provider: 'OpenRouter (Moonshot)',
-            description: 'Moonshot 最新中文大模型',
-            category: 'openrouter',
-        },
-        {
-            id: 'qwen/qwen3-235b-a22b',
-            name: 'Qwen3 Max 235B',
-            provider: 'OpenRouter (阿里)',
-            description: '通义千问最大规模模型',
-            category: 'openrouter',
-        },
-        // OpenAI 模型（备用）
-        {
-            id: 'gpt-4',
-            name: 'GPT-4',
-            provider: 'OpenAI',
-            description: '强大的通用模型',
-            category: 'openai',
-        },
-        {
-            id: 'gpt-3.5-turbo',
-            name: 'GPT-3.5 Turbo',
-            provider: 'OpenAI',
-            description: '快速且成本效益高',
-            category: 'openai',
-        },
-    ];
+  const availableModels = [
+    // 推荐模型
+    {
+      id: 'google/gemini-flash-1.5',
+      name: 'Gemini 1.5 Flash',
+      provider: 'Google',
+      description: '快速的多模态模型',
+      category: 'recommended',
+    },
+    {
+      id: 'google/gemini-pro-1.5',
+      name: 'Gemini 1.5 Pro',
+      provider: 'Google',
+      description: '强大的多模态模型',
+      category: 'recommended',
+    },
+    {
+      id: 'anthropic/claude-3-haiku',
+      name: 'Claude 3 Haiku',
+      provider: 'Anthropic',
+      description: '快速且经济的模型',
+      category: 'recommended',
+    },
+    {
+      id: 'anthropic/claude-3.5-sonnet',
+      name: 'Claude 3.5 Sonnet',
+      provider: 'Anthropic',
+      description: '平衡性能与速度',
+      category: 'recommended',
+    },
+    // 免费模型
+    {
+      id: 'meta-llama/llama-3.1-8b-instruct:free',
+      name: 'Llama 3.1 8B',
+      provider: 'Meta',
+      description: '免费开源模型',
+      category: 'free',
+    },
+    {
+      id: 'google/gemma-2-9b-it:free',
+      name: 'Gemma 2 9B',
+      provider: 'Google',
+      description: '免费轻量模型',
+      category: 'free',
+    },
+    {
+      id: 'mistralai/mistral-7b-instruct:free',
+      name: 'Mistral 7B',
+      provider: 'Mistral',
+      description: '免费高效模型',
+      category: 'free',
+    },
+    {
+      id: 'qwen/qwen-2-7b-instruct:free',
+      name: 'Qwen 2 7B',
+      provider: 'Alibaba',
+      description: '免费中文优化模型',
+      category: 'free',
+    },
+    // 高级模型
+    {
+      id: 'openai/gpt-4-turbo',
+      name: 'GPT-4 Turbo',
+      provider: 'OpenAI',
+      description: '强大的通用模型',
+      category: 'premium',
+    },
+    {
+      id: 'openai/gpt-4o',
+      name: 'GPT-4o',
+      provider: 'OpenAI',
+      description: '最新多模态模型',
+      category: 'premium',
+    },
+    {
+      id: 'anthropic/claude-3-opus',
+      name: 'Claude 3 Opus',
+      provider: 'Anthropic',
+      description: '最强推理能力',
+      category: 'premium',
+    },
+    {
+      id: 'deepseek/deepseek-chat',
+      name: 'DeepSeek Chat',
+      provider: 'DeepSeek',
+      description: '深度学习优化模型',
+      category: 'premium',
+    },
+    {
+      id: 'qwen/qwen-2.5-72b-instruct',
+      name: 'Qwen 2.5 72B',
+      provider: 'Alibaba',
+      description: '通义千问大规模模型',
+      category: 'premium',
+    },
+  ];
 
     res.json({
         success: true,
