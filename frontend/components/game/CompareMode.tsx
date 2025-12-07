@@ -35,12 +35,11 @@ const MODEL_OPTIONS = [
         group: '🇨🇳 中国模型', options: [
             { value: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
             { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+            { value: 'qwen/qwen3-max', label: 'Qwen3 Max' },
             { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' },
-            { value: 'qwen/qwen-2.5-coder-32b-instruct', label: 'Qwen 2.5 Coder 32B' },
-            { value: 'thudm/glm-4-plus', label: 'GLM-4 Plus (智谱)' },
-            { value: 'thudm/glm-z1-32b', label: 'GLM-Z1 32B (智谱)' },
-            { value: 'moonshotai/moonshot-v1-128k', label: 'Moonshot V1 128K (Kimi)' },
-            { value: 'moonshotai/kimi-vl-a3b-thinking:free', label: 'Kimi VL (免费)' },
+            { value: 'z-ai/glm-4.6', label: 'GLM-4.6 (智谱)' },
+            { value: 'moonshotai/kimi-k2', label: 'Kimi K2' },
+            { value: 'moonshotai/moonshot-v1-128k', label: 'Moonshot V1 128K' },
         ]
     },
     {

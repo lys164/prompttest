@@ -760,12 +760,11 @@ export default function GamePlayMode({
                                     <optgroup label="🇨🇳 中国模型">
                                         <option value="deepseek/deepseek-chat-v3-0324">DeepSeek V3</option>
                                         <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                                        <option value="qwen/qwen3-max">Qwen3 Max</option>
                                         <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
-                                        <option value="qwen/qwen-2.5-coder-32b-instruct">Qwen 2.5 Coder 32B</option>
-                                        <option value="thudm/glm-4-plus">GLM-4 Plus (智谱)</option>
-                                        <option value="thudm/glm-z1-32b">GLM-Z1 32B (智谱)</option>
-                                        <option value="moonshotai/moonshot-v1-128k">Moonshot V1 128K (Kimi)</option>
-                                        <option value="moonshotai/kimi-vl-a3b-thinking:free">Kimi VL (免费)</option>
+                                        <option value="z-ai/glm-4.6">GLM-4.6 (智谱)</option>
+                                        <option value="moonshotai/kimi-k2">Kimi K2</option>
+                                        <option value="moonshotai/moonshot-v1-128k">Moonshot V1 128K</option>
                                     </optgroup>
                                     <optgroup label="🔥 推荐模型">
                                         <option value="google/gemini-flash-1.5">Gemini 1.5 Flash</option>

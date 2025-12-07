@@ -274,7 +274,7 @@ router.get('/debug-session/:sessionId', (req: Request, res: Response) => {
  * GET /api/dev/models
  */
 router.get('/models', (req: Request, res: Response) => {
-  const availableModels = [
+    const availableModels = [
     // 中国模型
     {
       id: 'deepseek/deepseek-chat-v3-0324',
@@ -291,6 +291,13 @@ router.get('/models', (req: Request, res: Response) => {
       category: 'chinese',
     },
     {
+      id: 'qwen/qwen3-max',
+      name: 'Qwen3 Max',
+      provider: 'Alibaba',
+      description: '通义千问最新旗舰模型',
+      category: 'chinese',
+    },
+    {
       id: 'qwen/qwen-2.5-72b-instruct',
       name: 'Qwen 2.5 72B',
       provider: 'Alibaba',
@@ -298,24 +305,17 @@ router.get('/models', (req: Request, res: Response) => {
       category: 'chinese',
     },
     {
-      id: 'qwen/qwen-2.5-coder-32b-instruct',
-      name: 'Qwen 2.5 Coder 32B',
-      provider: 'Alibaba',
-      description: '通义千问代码模型',
+      id: 'z-ai/glm-4.6',
+      name: 'GLM-4.6',
+      provider: '智谱AI',
+      description: '智谱最新旗舰模型',
       category: 'chinese',
     },
     {
-      id: 'thudm/glm-4-plus',
-      name: 'GLM-4 Plus',
-      provider: '智谱AI',
-      description: '智谱旗舰模型',
-      category: 'chinese',
-    },
-    {
-      id: 'thudm/glm-z1-32b',
-      name: 'GLM-Z1 32B',
-      provider: '智谱AI',
-      description: '智谱推理模型',
+      id: 'moonshotai/kimi-k2',
+      name: 'Kimi K2',
+      provider: 'Moonshot',
+      description: 'Kimi 最新模型',
       category: 'chinese',
     },
     {
@@ -325,94 +325,87 @@ router.get('/models', (req: Request, res: Response) => {
       description: '长上下文模型',
       category: 'chinese',
     },
-    {
-      id: 'moonshotai/kimi-vl-a3b-thinking:free',
-      name: 'Kimi VL',
-      provider: 'Moonshot (Kimi)',
-      description: '免费多模态模型',
-      category: 'chinese',
-    },
-    // 推荐模型
-    {
-      id: 'google/gemini-flash-1.5',
-      name: 'Gemini 1.5 Flash',
-      provider: 'Google',
-      description: '快速的多模态模型',
-      category: 'recommended',
-    },
-    {
-      id: 'google/gemini-pro-1.5',
-      name: 'Gemini 1.5 Pro',
-      provider: 'Google',
-      description: '强大的多模态模型',
-      category: 'recommended',
-    },
-    {
-      id: 'anthropic/claude-3-haiku',
-      name: 'Claude 3 Haiku',
-      provider: 'Anthropic',
-      description: '快速且经济的模型',
-      category: 'recommended',
-    },
-    {
-      id: 'anthropic/claude-3.5-sonnet',
-      name: 'Claude 3.5 Sonnet',
-      provider: 'Anthropic',
-      description: '平衡性能与速度',
-      category: 'recommended',
-    },
-    // 免费模型
-    {
-      id: 'meta-llama/llama-3.1-8b-instruct:free',
-      name: 'Llama 3.1 8B',
-      provider: 'Meta',
-      description: '免费开源模型',
-      category: 'free',
-    },
-    {
-      id: 'google/gemma-2-9b-it:free',
-      name: 'Gemma 2 9B',
-      provider: 'Google',
-      description: '免费轻量模型',
-      category: 'free',
-    },
-    {
-      id: 'mistralai/mistral-7b-instruct:free',
-      name: 'Mistral 7B',
-      provider: 'Mistral',
-      description: '免费高效模型',
-      category: 'free',
-    },
-    {
-      id: 'qwen/qwen-2-7b-instruct:free',
-      name: 'Qwen 2 7B',
-      provider: 'Alibaba',
-      description: '免费中文优化模型',
-      category: 'free',
-    },
-    // 高级模型
-    {
-      id: 'openai/gpt-4-turbo',
-      name: 'GPT-4 Turbo',
-      provider: 'OpenAI',
-      description: '强大的通用模型',
-      category: 'premium',
-    },
-    {
-      id: 'openai/gpt-4o',
-      name: 'GPT-4o',
-      provider: 'OpenAI',
-      description: '最新多模态模型',
-      category: 'premium',
-    },
-    {
-      id: 'anthropic/claude-3-opus',
-      name: 'Claude 3 Opus',
-      provider: 'Anthropic',
-      description: '最强推理能力',
-      category: 'premium',
-    },
-  ];
+        // 推荐模型
+        {
+            id: 'google/gemini-flash-1.5',
+            name: 'Gemini 1.5 Flash',
+            provider: 'Google',
+            description: '快速的多模态模型',
+            category: 'recommended',
+        },
+        {
+            id: 'google/gemini-pro-1.5',
+            name: 'Gemini 1.5 Pro',
+            provider: 'Google',
+            description: '强大的多模态模型',
+            category: 'recommended',
+        },
+        {
+            id: 'anthropic/claude-3-haiku',
+            name: 'Claude 3 Haiku',
+            provider: 'Anthropic',
+            description: '快速且经济的模型',
+            category: 'recommended',
+        },
+        {
+            id: 'anthropic/claude-3.5-sonnet',
+            name: 'Claude 3.5 Sonnet',
+            provider: 'Anthropic',
+            description: '平衡性能与速度',
+            category: 'recommended',
+        },
+        // 免费模型
+        {
+            id: 'meta-llama/llama-3.1-8b-instruct:free',
+            name: 'Llama 3.1 8B',
+            provider: 'Meta',
+            description: '免费开源模型',
+            category: 'free',
+        },
+        {
+            id: 'google/gemma-2-9b-it:free',
+            name: 'Gemma 2 9B',
+            provider: 'Google',
+            description: '免费轻量模型',
+            category: 'free',
+        },
+        {
+            id: 'mistralai/mistral-7b-instruct:free',
+            name: 'Mistral 7B',
+            provider: 'Mistral',
+            description: '免费高效模型',
+            category: 'free',
+        },
+        {
+            id: 'qwen/qwen-2-7b-instruct:free',
+            name: 'Qwen 2 7B',
+            provider: 'Alibaba',
+            description: '免费中文优化模型',
+            category: 'free',
+        },
+        // 高级模型
+        {
+            id: 'openai/gpt-4-turbo',
+            name: 'GPT-4 Turbo',
+            provider: 'OpenAI',
+            description: '强大的通用模型',
+            category: 'premium',
+        },
+        {
+            id: 'openai/gpt-4o',
+            name: 'GPT-4o',
+            provider: 'OpenAI',
+            description: '最新多模态模型',
+            category: 'premium',
+        },
+        {
+            id: 'anthropic/claude-3-opus',
+            name: 'Claude 3 Opus',
+            provider: 'Anthropic',
+            description: '最强推理能力',
+            category: 'premium',
+        },
+    ];
 
     res.json({
         success: true,
