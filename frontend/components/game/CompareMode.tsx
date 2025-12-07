@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { gameApi, devApi } from '@/lib/api';
 
 interface CompareModeProps {
@@ -12,12 +12,18 @@ interface CompareModeProps {
     onSessionUpdate: (session: any) => void;
 }
 
+interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: number;
+}
+
 interface SessionConfig {
     id: number;
     name: string;
     model: string;
     systemPrompt: string;
-    response: string | null;
+    chatHistory: ChatMessage[];
     loading: boolean;
     error: string | null;
     generationTime: number | null;
@@ -25,9 +31,9 @@ interface SessionConfig {
 }
 
 const DEFAULT_MODELS = [
-    'deepseek/deepseek-chat-v3-0324',
-    'qwen/qwen-2.5-72b-instruct',
-    'google/gemini-flash-1.5',
+    'doubao-seed-1-6-251015',
+    'deepseek/deepseek-v3.2',
+    'qwen/qwen3-max',
 ];
 
 const MODEL_OPTIONS = [
@@ -81,26 +87,40 @@ export default function CompareMode({
     const [gameStarted, setGameStarted] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
     const [defaultSystemPrompt, setDefaultSystemPrompt] = useState('');
+    const [currentRound, setCurrentRound] = useState(0);
+    const [nextUserInput, setNextUserInput] = useState('');
+    const chatContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // 3个session的配置
     const [sessions, setSessions] = useState<SessionConfig[]>([
-        { id: 1, name: 'Session A', model: DEFAULT_MODELS[0], systemPrompt: '', response: null, loading: false, error: null, generationTime: null, color: 'blue' },
-        { id: 2, name: 'Session B', model: DEFAULT_MODELS[1], systemPrompt: '', response: null, loading: false, error: null, generationTime: null, color: 'purple' },
-        { id: 3, name: 'Session C', model: DEFAULT_MODELS[2], systemPrompt: '', response: null, loading: false, error: null, generationTime: null, color: 'green' },
+        { id: 1, name: 'Session A', model: DEFAULT_MODELS[0], systemPrompt: '', chatHistory: [], loading: false, error: null, generationTime: null, color: 'blue' },
+        { id: 2, name: 'Session B', model: DEFAULT_MODELS[1], systemPrompt: '', chatHistory: [], loading: false, error: null, generationTime: null, color: 'purple' },
+        { id: 3, name: 'Session C', model: DEFAULT_MODELS[2], systemPrompt: '', chatHistory: [], loading: false, error: null, generationTime: null, color: 'green' },
     ]);
 
     // 是否使用统一的 system prompt
     const [useUnifiedPrompt, setUseUnifiedPrompt] = useState(true);
     const [unifiedPrompt, setUnifiedPrompt] = useState('');
 
+    // 用户自定义输入
+    const [customUserInput, setCustomUserInput] = useState('');
+
     useEffect(() => {
         initializeCompareMode();
     }, [sessionId, session]);
 
+    // 滚动到最新消息
+    useEffect(() => {
+        chatContainerRefs.current.forEach((ref) => {
+            if (ref) {
+                ref.scrollTop = ref.scrollHeight;
+            }
+        });
+    }, [sessions]);
+
     const initializeCompareMode = async () => {
         console.log('🔧 CompareMode 初始化开始');
 
-        // 检查是否有用户角色信息
         if (session?.userCharacterInfo) {
             console.log('✅ 找到 userCharacterInfo:', session.userCharacterInfo.scriptCharacterName);
             setUserCharacterInfo(session.userCharacterInfo);
@@ -108,10 +128,8 @@ export default function CompareMode({
             console.log('⚠️ 没有 userCharacterInfo');
         }
 
-        // 确保初始状态不是已开始
         setGameStarted(false);
 
-        // 获取默认的 system prompt
         try {
             const promptRes = await gameApi.getSystemPrompt(sessionId);
             if (promptRes?.data?.systemPrompt) {
@@ -123,19 +141,16 @@ export default function CompareMode({
             console.warn('Failed to get default system prompt:', error);
         }
 
-        // 标记初始化完成
         setIsInitialized(true);
         console.log('✅ CompareMode 初始化完成');
     };
 
-    // 更新单个session的配置
     const updateSession = (sessionId: number, updates: Partial<SessionConfig>) => {
         setSessions(prev => prev.map(s =>
             s.id === sessionId ? { ...s, ...updates } : s
         ));
     };
 
-    // 替换角色变量
     const replaceCharacterVariables = (text: string): string => {
         if (!text || !session?.characterMappings) return text;
 
@@ -167,44 +182,75 @@ export default function CompareMode({
         return result;
     };
 
-    // 选中策略选项
     const handleOptionSelect = (option: any) => {
         setSelectedOption(option);
     };
 
-    // 自定义输入确认
     const handleCustomConfirm = async () => {
         const option = { id: 'custom', 文本: customUserInput };
         setSelectedOption(option);
         await runComparison(option.文本);
     };
 
-    // 确认选择，同时运行3个session
     const handleConfirmSelection = async () => {
         if (!selectedOption) return;
         await runComparison(selectedOption.文本);
     };
 
-    // 执行对比
+    // 执行对比（支持多轮）
     const runComparison = async (userInput: string) => {
         setGameStarted(true);
+        setCurrentRound(prev => prev + 1);
 
-        // 设置所有 session 为加载状态
+        const userMessage: ChatMessage = {
+            role: 'user',
+            content: userInput,
+            timestamp: Date.now(),
+        };
+
+        // 添加用户消息到所有 session 的历史
         sessions.forEach(s => {
-            updateSession(s.id, { loading: true, error: null, response: null, generationTime: null });
+            updateSession(s.id, {
+                chatHistory: [...s.chatHistory, userMessage],
+                loading: true,
+                error: null,
+                generationTime: null,
+            });
         });
 
         try {
-            // 构建用户提示
-            const userPrompt = `用户选择了：${userInput}\n\n请根据这个选择生成故事的下一步发展。`;
+            // 构建包含历史的用户提示
+            const buildUserPromptWithHistory = (chatHistory: ChatMessage[], newUserInput: string) => {
+                if (chatHistory.length <= 1) {
+                    // 第一轮
+                    return `用户选择了：${newUserInput}\n\n请根据这个选择生成故事的下一步发展。`;
+                } else {
+                    // 多轮对话：包含历史
+                    let historyText = '以下是之前的对话历史：\n\n';
+                    chatHistory.slice(0, -1).forEach((msg, idx) => {
+                        if (msg.role === 'user') {
+                            historyText += `【用户选择 ${Math.floor(idx / 2) + 1}】${msg.content}\n\n`;
+                        } else {
+                            historyText += `【故事发展 ${Math.floor(idx / 2) + 1}】${msg.content.substring(0, 500)}...\n\n`;
+                        }
+                    });
+                    historyText += `---\n\n现在用户做出了新的选择：${newUserInput}\n\n请基于以上历史和新选择，继续推进故事发展。`;
+                    return historyText;
+                }
+            };
 
             // 使用高级对比 API 并行调用所有模型
+            const currentSessions = sessions.map(s => ({
+                ...s,
+                chatHistory: [...s.chatHistory, userMessage],
+            }));
+
             const compareResponse = await devApi.compareAdvanced(
-                sessions.map(s => ({
+                currentSessions.map(s => ({
                     id: String(s.id),
                     model: s.model,
                     systemPrompt: useUnifiedPrompt ? unifiedPrompt : (s.systemPrompt || defaultSystemPrompt),
-                    userPrompt: userPrompt,
+                    userPrompt: buildUserPromptWithHistory(s.chatHistory, userInput),
                     temperature: 0.7,
                 }))
             );
@@ -212,15 +258,24 @@ export default function CompareMode({
             // 处理响应
             if (compareResponse?.success && compareResponse?.data?.results) {
                 compareResponse.data.results.forEach((result: any) => {
-                    const sessionId = parseInt(result.id);
+                    const sid = parseInt(result.id);
+                    const currentSession = sessions.find(s => s.id === sid);
+                    if (!currentSession) return;
+
                     if (result.success) {
-                        updateSession(sessionId, {
-                            response: result.response,
+                        const assistantMessage: ChatMessage = {
+                            role: 'assistant',
+                            content: result.response,
+                            timestamp: Date.now(),
+                        };
+                        updateSession(sid, {
+                            chatHistory: [...currentSession.chatHistory, userMessage, assistantMessage],
                             loading: false,
                             generationTime: result.generationTime,
                         });
                     } else {
-                        updateSession(sessionId, {
+                        updateSession(sid, {
+                            chatHistory: [...currentSession.chatHistory, userMessage],
                             error: result.error || '生成失败',
                             loading: false,
                             generationTime: result.generationTime,
@@ -228,7 +283,6 @@ export default function CompareMode({
                     }
                 });
             } else {
-                // 如果整体请求失败，所有 session 都标记为错误
                 sessions.forEach(s => {
                     updateSession(s.id, {
                         error: '请求失败',
@@ -245,28 +299,34 @@ export default function CompareMode({
                 });
             });
         }
+
+        setNextUserInput('');
+    };
+
+    // 继续对话
+    const handleContinueConversation = async () => {
+        if (!nextUserInput.trim()) return;
+        await runComparison(nextUserInput);
     };
 
     // 重置对比
     const handleReset = () => {
         setGameStarted(false);
         setSelectedOption(null);
+        setCurrentRound(0);
+        setNextUserInput('');
         setSessions(prev => prev.map(s => ({
             ...s,
-            response: null,
+            chatHistory: [],
             loading: false,
             error: null,
             generationTime: null,
         })));
     };
 
-    // 复制默认 prompt 到统一 prompt
     const copyDefaultPrompt = () => {
         setUnifiedPrompt(defaultSystemPrompt);
     };
-
-    // 用户自定义输入（当没有预置策略时）
-    const [customUserInput, setCustomUserInput] = useState('');
 
     // 加载中状态
     if (!isInitialized) {
@@ -298,7 +358,7 @@ export default function CompareMode({
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent mb-2">
                             ⚖️ 模型对比模式
                         </h1>
-                        <p className="text-gray-400">同时运行3个session，对比不同模型的效果</p>
+                        <p className="text-gray-400">同时运行3个session，对比不同模型的效果，支持多轮对话</p>
                     </div>
 
                     {/* 3个Session配置 */}
@@ -315,7 +375,6 @@ export default function CompareMode({
                                     🎯 {s.name}
                                 </h3>
 
-                                {/* 模型选择 */}
                                 <div className="mb-4">
                                     <label className="block text-sm font-bold text-gray-300 mb-2">
                                         🤖 选择模型
@@ -337,7 +396,6 @@ export default function CompareMode({
                                     </select>
                                 </div>
 
-                                {/* 独立 System Prompt（如果不使用统一） */}
                                 {!useUnifiedPrompt && (
                                     <div>
                                         <label className="block text-sm font-bold text-gray-300 mb-2">
@@ -399,7 +457,6 @@ export default function CompareMode({
                                     🎭 你将扮演：<span className="text-blue-400">{userCharacterInfo.scriptCharacterName}</span>
                                 </h3>
 
-                                {/* 故事背景 */}
                                 <div className="bg-gray-900 rounded-lg p-4 mb-6 border border-gray-700">
                                     <h4 className="text-lg font-bold text-green-400 mb-2">🌍 故事背景</h4>
                                     <p className="text-gray-300 text-sm whitespace-pre-wrap">
@@ -407,7 +464,6 @@ export default function CompareMode({
                                     </p>
                                 </div>
 
-                                {/* 选择点 */}
                                 <div className="bg-yellow-900/20 rounded-lg p-4 mb-6 border border-yellow-700/50">
                                     <h4 className="text-lg font-bold text-yellow-400 mb-2">❓ 面临的选择</h4>
                                     <p className="text-gray-300">
@@ -415,7 +471,6 @@ export default function CompareMode({
                                     </p>
                                 </div>
 
-                                {/* 策略选项 */}
                                 <div className="space-y-3">
                                     <h4 className="text-lg font-bold text-white">💡 选择你的策略：</h4>
                                     {userCharacterInfo.预置策略选项?.map((option: any, index: number) => {
@@ -447,7 +502,6 @@ export default function CompareMode({
                                     })}
                                 </div>
 
-                                {/* 确认按钮 */}
                                 {selectedOption && (
                                     <motion.button
                                         initial={{ opacity: 0, y: 10 }}
@@ -474,7 +528,6 @@ export default function CompareMode({
                                     className="w-full h-32 bg-gray-900 text-white rounded-lg p-4 border border-gray-700 focus:border-blue-500 focus:outline-none"
                                 />
 
-                                {/* 确认按钮 */}
                                 {customUserInput.trim() && (
                                     <motion.button
                                         initial={{ opacity: 0, y: 10 }}
@@ -493,7 +546,7 @@ export default function CompareMode({
         );
     }
 
-    // 对比结果界面
+    // 对比结果界面（支持多轮对话）
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             <motion.div
@@ -501,30 +554,30 @@ export default function CompareMode({
                 animate={{ opacity: 1 }}
                 className="space-y-6"
             >
-                {/* 标题和重置按钮 */}
-                <div className="flex items-center justify-between">
+                {/* 标题和控制按钮 */}
+                <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-white">⚖️ 模型对比结果</h1>
+                        <h1 className="text-3xl font-bold text-white">⚖️ 多轮对话对比</h1>
                         <p className="text-gray-400 mt-1">
-                            选择：<span className="text-orange-400 font-bold">{selectedOption?.文本}</span>
+                            当前轮次：<span className="text-orange-400 font-bold">第 {currentRound} 轮</span>
                         </p>
                     </div>
                     <button
                         onClick={handleReset}
                         className="px-6 py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition"
                     >
-                        🔄 重新对比
+                        🔄 重新开始
                     </button>
                 </div>
 
-                {/* 3个Session结果并排显示 */}
+                {/* 3个Session对话历史并排显示 */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {sessions.map((s) => {
+                    {sessions.map((s, idx) => {
                         const colorClasses = {
-                            blue: { border: 'border-blue-500', bg: 'from-blue-900/50 to-blue-800/30', text: 'text-blue-400', loading: 'border-blue-500' },
-                            purple: { border: 'border-purple-500', bg: 'from-purple-900/50 to-purple-800/30', text: 'text-purple-400', loading: 'border-purple-500' },
-                            green: { border: 'border-green-500', bg: 'from-green-900/50 to-green-800/30', text: 'text-green-400', loading: 'border-green-500' },
-                        }[s.color] || { border: 'border-gray-500', bg: 'from-gray-900/50 to-gray-800/30', text: 'text-gray-400', loading: 'border-gray-500' };
+                            blue: { border: 'border-blue-500', bg: 'from-blue-900/50 to-blue-800/30', text: 'text-blue-400', userBg: 'bg-blue-900/50', assistantBg: 'bg-gray-800' },
+                            purple: { border: 'border-purple-500', bg: 'from-purple-900/50 to-purple-800/30', text: 'text-purple-400', userBg: 'bg-purple-900/50', assistantBg: 'bg-gray-800' },
+                            green: { border: 'border-green-500', bg: 'from-green-900/50 to-green-800/30', text: 'text-green-400', userBg: 'bg-green-900/50', assistantBg: 'bg-gray-800' },
+                        }[s.color] || { border: 'border-gray-500', bg: 'from-gray-900/50 to-gray-800/30', text: 'text-gray-400', userBg: 'bg-gray-700', assistantBg: 'bg-gray-800' };
 
                         return (
                             <motion.div
@@ -532,49 +585,78 @@ export default function CompareMode({
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: s.id * 0.1 }}
-                                className={`bg-gradient-to-br ${colorClasses.bg} rounded-lg border-2 ${colorClasses.border} overflow-hidden`}
+                                className={`bg-gradient-to-br ${colorClasses.bg} rounded-lg border-2 ${colorClasses.border} overflow-hidden flex flex-col`}
                             >
                                 {/* Session 头部 */}
                                 <div className={`px-4 py-3 bg-gray-900/50 border-b ${colorClasses.border}`}>
                                     <div className="flex items-center justify-between">
                                         <h3 className={`font-bold ${colorClasses.text}`}>{s.name}</h3>
-                                        {s.generationTime && (
-                                            <span className="text-xs text-gray-400">
-                                                ⏱️ {(s.generationTime / 1000).toFixed(2)}s
-                                            </span>
-                                        )}
+                                        <span className="text-xs text-gray-400">
+                                            {s.chatHistory.filter(m => m.role === 'assistant').length} 轮
+                                        </span>
                                     </div>
                                     <p className="text-xs text-gray-500 mt-1 truncate">
                                         {MODEL_OPTIONS.flatMap(g => g.options).find(o => o.value === s.model)?.label || s.model}
                                     </p>
                                 </div>
 
-                                {/* Session 内容 */}
-                                <div className="p-4 min-h-64">
-                                    {s.loading ? (
-                                        <div className="flex flex-col items-center justify-center h-48">
+                                {/* 对话历史区域 */}
+                                <div
+                                    ref={el => { chatContainerRefs.current[idx] = el; }}
+                                    className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[500px] min-h-[300px]"
+                                >
+                                    <AnimatePresence>
+                                        {s.chatHistory.map((msg, msgIdx) => (
+                                            <motion.div
+                                                key={`${s.id}-${msgIdx}`}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className={`rounded-lg p-3 ${msg.role === 'user' ? colorClasses.userBg : colorClasses.assistantBg}`}
+                                            >
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`text-xs font-bold ${msg.role === 'user' ? colorClasses.text : 'text-gray-400'}`}>
+                                                        {msg.role === 'user' ? '👤 用户选择' : '🤖 AI 回复'}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        #{Math.floor(msgIdx / 2) + 1}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed">
+                                                    {msg.content}
+                                                </p>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+
+                                    {/* 加载状态 */}
+                                    {s.loading && (
+                                        <motion.div
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg"
+                                        >
                                             <motion.div
                                                 animate={{ rotate: 360 }}
-                                                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-                                                className={`w-12 h-12 border-4 border-gray-700 ${colorClasses.loading} border-t-current rounded-full mb-4`}
+                                                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                                className={`w-5 h-5 border-2 border-gray-600 ${colorClasses.border} border-t-current rounded-full`}
                                             />
-                                            <p className="text-gray-400 text-sm">生成中...</p>
+                                            <span className="text-gray-400 text-sm">生成中...</span>
+                                        </motion.div>
+                                    )}
+
+                                    {/* 错误状态 */}
+                                    {s.error && (
+                                        <div className="bg-red-900/30 rounded-lg p-3 border border-red-500/50">
+                                            <p className="text-red-400 font-bold text-sm mb-1">❌ 生成失败</p>
+                                            <p className="text-red-300 text-xs">{s.error}</p>
                                         </div>
-                                    ) : s.error ? (
-                                        <div className="bg-red-900/30 rounded-lg p-4 border border-red-500/50">
-                                            <p className="text-red-400 font-bold mb-2">❌ 生成失败</p>
-                                            <p className="text-red-300 text-sm">{s.error}</p>
-                                        </div>
-                                    ) : s.response ? (
-                                        <div className="prose prose-invert prose-sm max-w-none">
-                                            <p className="text-gray-200 whitespace-pre-wrap leading-relaxed">
-                                                {s.response}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-48 text-gray-500">
-                                            等待生成...
-                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Session 底部统计 */}
+                                <div className={`px-4 py-2 bg-gray-900/50 border-t ${colorClasses.border} text-xs text-gray-500`}>
+                                    {s.generationTime && (
+                                        <span>最后响应: {(s.generationTime / 1000).toFixed(2)}s</span>
                                     )}
                                 </div>
                             </motion.div>
@@ -582,24 +664,79 @@ export default function CompareMode({
                     })}
                 </div>
 
-                {/* 对比统计 */}
-                {sessions.every(s => !s.loading && (s.response || s.error)) && (
+                {/* 继续对话区域 */}
+                {sessions.every(s => !s.loading) && sessions.some(s => s.chatHistory.length > 0) && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-gray-800 rounded-lg p-6 border border-gray-700"
                     >
-                        <h3 className="text-xl font-bold text-white mb-4">📊 对比统计</h3>
+                        <h3 className="text-xl font-bold text-white mb-4">💬 继续对话</h3>
+                        <p className="text-gray-400 text-sm mb-4">
+                            输入你的下一步选择或行动，所有session将继续基于各自的历史进行对话。
+                        </p>
+                        <div className="flex gap-4">
+                            <textarea
+                                value={nextUserInput}
+                                onChange={(e) => setNextUserInput(e.target.value)}
+                                placeholder="输入你的下一个选择，例如：我决定仔细检查那个可疑的设备..."
+                                className="flex-1 h-24 bg-gray-900 text-white rounded-lg p-4 border border-gray-700 focus:border-blue-500 focus:outline-none resize-none"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.metaKey && nextUserInput.trim()) {
+                                        handleContinueConversation();
+                                    }
+                                }}
+                            />
+                        </div>
+                        <div className="flex justify-between items-center mt-4">
+                            <span className="text-xs text-gray-500">⌘ + Enter 快速发送</span>
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleContinueConversation}
+                                disabled={!nextUserInput.trim()}
+                                className={`px-8 py-3 rounded-lg font-bold transition ${nextUserInput.trim()
+                                    ? 'bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white'
+                                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                🚀 发送到所有Session
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* 对比统计 */}
+                {sessions.every(s => !s.loading) && sessions.some(s => s.chatHistory.length > 0) && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-gray-800 rounded-lg p-6 border border-gray-700"
+                    >
+                        <h3 className="text-xl font-bold text-white mb-4">📊 对话统计</h3>
                         <div className="grid grid-cols-3 gap-4">
                             {sessions.map((s) => {
                                 const modelName = MODEL_OPTIONS.flatMap(g => g.options).find(o => o.value === s.model)?.label || s.model;
+                                const totalChars = s.chatHistory
+                                    .filter(m => m.role === 'assistant')
+                                    .reduce((sum, m) => sum + m.content.length, 0);
+                                const rounds = s.chatHistory.filter(m => m.role === 'assistant').length;
+
                                 return (
                                     <div key={s.id} className="bg-gray-900 rounded-lg p-4">
                                         <p className="font-bold text-white mb-2">{s.name}</p>
-                                        <p className="text-sm text-gray-400">{modelName}</p>
+                                        <p className="text-sm text-gray-400 truncate">{modelName}</p>
                                         <div className="mt-3 space-y-1 text-sm">
                                             <div className="flex justify-between">
-                                                <span className="text-gray-500">响应时间:</span>
+                                                <span className="text-gray-500">对话轮数:</span>
+                                                <span className="text-blue-400">{rounds}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">总字数:</span>
+                                                <span className="text-green-400">{totalChars}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">最后响应:</span>
                                                 <span className={s.error ? 'text-red-400' : 'text-green-400'}>
                                                     {s.generationTime ? `${(s.generationTime / 1000).toFixed(2)}s` : '-'}
                                                 </span>
@@ -607,13 +744,7 @@ export default function CompareMode({
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">状态:</span>
                                                 <span className={s.error ? 'text-red-400' : 'text-green-400'}>
-                                                    {s.error ? '失败' : '成功'}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-500">字数:</span>
-                                                <span className="text-blue-400">
-                                                    {s.response ? s.response.length : 0}
+                                                    {s.error ? '失败' : '正常'}
                                                 </span>
                                             </div>
                                         </div>
@@ -627,4 +758,3 @@ export default function CompareMode({
         </div>
     );
 }
-
