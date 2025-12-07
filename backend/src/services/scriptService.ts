@@ -257,11 +257,11 @@ export class ScriptService {
             '外貌描述': aiCharacter?.外貌描述 || '普通外表',
             '面对未知的态度': aiCharacter?.面对未知的态度 || '谨慎',
             '恐惧/软肋': aiCharacter?.恐惧软肋 || '未知',
-            '喜好/特长': Array.isArray(aiCharacter?.喜好特长) 
-                ? aiCharacter.喜好特长.join('、') 
+            '喜好/特长': Array.isArray(aiCharacter?.喜好特长)
+                ? aiCharacter.喜好特长.join('、')
                 : '未知',
-            '讨厌的东西': Array.isArray(aiCharacter?.讨厌的东西) 
-                ? aiCharacter.讨厌的东西.join('、') 
+            '讨厌的东西': Array.isArray(aiCharacter?.讨厌的东西)
+                ? aiCharacter.讨厌的东西.join('、')
                 : '未知',
 
             // 超能力处理 - 映射后是数组
@@ -295,14 +295,14 @@ export class ScriptService {
         console.log(`📖 从 Firebase 读取所有剧本`);
 
         // 从 Firebase 读取
-            const snapshot = await db.collection('livestory-story').get();
+        const snapshot = await db.collection('livestory-story').get();
 
-            if (!snapshot.empty) {
-                console.log(`📖 从 Firebase 读取 ${snapshot.size} 个剧本`);
+        if (!snapshot.empty) {
+            console.log(`📖 从 Firebase 读取 ${snapshot.size} 个剧本`);
             const scripts = this.mapFirebaseScripts(snapshot);
             console.log(`✅ 成功映射 ${scripts.length} 个剧本`);
             return scripts;
-            } else {
+        } else {
             console.warn('⚠️  Firebase 中没有剧本数据');
             return [];
         }
@@ -315,15 +315,15 @@ export class ScriptService {
         console.log(`📖 从 Firebase 按类别 ${category} 读取剧本`);
 
         // 从 Firebase 读取
-            const snapshot = await db
-                .collection('livestory-story')
-                .where('剧本类别', '==', category)
-                .get();
+        const snapshot = await db
+            .collection('livestory-story')
+            .where('剧本类别', '==', category)
+            .get();
 
-            if (!snapshot.empty) {
-                console.log(`📖 从 Firebase 按类别 ${category} 读取 ${snapshot.size} 个剧本`);
-                return this.mapFirebaseScripts(snapshot);
-            } else {
+        if (!snapshot.empty) {
+            console.log(`📖 从 Firebase 按类别 ${category} 读取 ${snapshot.size} 个剧本`);
+            return this.mapFirebaseScripts(snapshot);
+        } else {
             console.warn(`⚠️  Firebase 中没有 ${category} 类别的剧本`);
             return [];
         }
@@ -336,12 +336,12 @@ export class ScriptService {
         console.log(`🔍 [getScriptById] 正在查询剧本: ${scriptId}`);
 
         // 从 Firebase 读取
-            const doc = await db.collection('livestory-story').doc(scriptId).get();
+        const doc = await db.collection('livestory-story').doc(scriptId).get();
 
-            if (doc.exists) {
+        if (doc.exists) {
             console.log(`✅ [getScriptById] 找到剧本 ${scriptId}`);
-                return this.mapFirebaseScript(doc);
-            } else {
+            return this.mapFirebaseScript(doc);
+        } else {
             console.error(`❌ [getScriptById] Firebase 中找不到剧本 ${scriptId}`);
             return undefined;
         }
@@ -369,7 +369,7 @@ export class ScriptService {
         // 🔍 获取角色详细设定 - 可能是对象格式 {"{{角色名}}": {...}} 或数组格式
         let roleDetailsMap: { [key: string]: any } = {};
         const rawRoleDetails = data.角色详细设定;
-        
+
         if (rawRoleDetails && typeof rawRoleDetails === 'object' && !Array.isArray(rawRoleDetails)) {
             // 对象格式：{"{{AI修复师}}": {...}, "{{竞争对手}}": {...}}
             console.log('  📋 角色详细设定是对象格式，key 数量:', Object.keys(rawRoleDetails).length);
@@ -387,20 +387,20 @@ export class ScriptService {
         // 🔍 获取角色数据 - 优先从角色网络.节点获取
         let rolePoolData: any[] = [];
         const networkNodes = data.角色网络?.节点;
-        
+
         if (Array.isArray(networkNodes) && networkNodes.length > 0) {
             console.log('  📋 从角色网络.节点构建角色池:', networkNodes);
-            
+
             rolePoolData = networkNodes.map((node: any, index: number) => {
                 // 节点可能是字符串 "{{AI修复师}}" 或对象
                 let roleName = typeof node === 'string' ? node : (node.姓名 || node.name || `角色${index + 1}`);
                 // 去掉 {{ }} 包裹
                 const cleanName = roleName.replace(/^\{\{|\}\}$/g, '');
                 const roleKey = roleName; // 保留原始 key 用于查找详细设定
-                
+
                 // 从 roleDetailsMap 中获取详细设定
                 const detail = roleDetailsMap[roleKey] || roleDetailsMap[cleanName] || {};
-                
+
                 return {
                     id: `role-${doc.id}-${index}`,
                     roleId: cleanName,
@@ -424,12 +424,12 @@ export class ScriptService {
         // 如果检测到角色变量，为每个变量创建一个虚拟角色池条目
         if (characterVariables.length > 0) {
             console.log(`  🎭 检测到角色变量: ${characterVariables.join(', ')}`);
-            
+
             // 确保 rolePoolData 是数组
             if (!Array.isArray(rolePoolData)) {
                 rolePoolData = [];
             }
-            
+
             // 为每个变量生成角色条目（如果 rolePoolData 里还没有）
             characterVariables.forEach((varName) => {
                 const existingRole = rolePoolData.find((r: any) => r.roleId === varName || r.姓名 === varName);
@@ -469,7 +469,7 @@ export class ScriptService {
 
         // 🔍 构建角色详细设定数组
         let roleDetailsData: any[] = [];
-        
+
         // 从 roleDetailsMap 或 rolePoolData 构建
         if (Object.keys(roleDetailsMap).length > 0) {
             roleDetailsData = Object.entries(roleDetailsMap).map(([key, detail]: [string, any], index) => {
@@ -599,10 +599,10 @@ export class ScriptService {
 
             return {
                 roleId: detail.roleId || detail.id || `role-${timestamp}-${index}`,
-            角色简介: detail.角色简介,
-            角色目标: detail.角色目标,
-            角色视角的故事背景: detail.角色视角的故事背景,
-            第一个选择点: detail.第一个选择点,
+                角色简介: detail.角色简介,
+                角色目标: detail.角色目标,
+                角色视角的故事背景: detail.角色视角的故事背景,
+                第一个选择点: detail.第一个选择点,
                 预置策略选项: (Array.isArray(optionsArray) ? optionsArray : []).map((opt: any, optIndex: number) => {
                     // 处理两种格式：
                     // 1. 对象格式：{ 文本: '...', 后果描述: '...', ... }
@@ -619,7 +619,7 @@ export class ScriptService {
                             id: opt.id || `option-${timestamp}-${index}-${optIndex}`,
                             文本: opt.文本 || opt.text || `选项 ${optIndex + 1}`,
                             后果描述: opt.后果描述 || opt.consequence || '',
-                推荐AI特征: opt.推荐AI特征 || [],
+                            推荐AI特征: opt.推荐AI特征 || [],
                         };
                     }
                     return {

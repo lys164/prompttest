@@ -275,63 +275,70 @@ router.get('/debug-session/:sessionId', (req: Request, res: Response) => {
  */
 router.get('/models', (req: Request, res: Response) => {
     const availableModels = [
-        // 中国模型
-        {
-            id: 'doubao-seed-1-6-251015',
-            name: '豆包 1.6',
-            provider: '字节跳动',
-            description: '豆包最新模型（火山引擎）',
-            category: 'chinese',
-        },
-        {
-            id: 'deepseek/deepseek-chat-v3-0324',
-            name: 'DeepSeek V3',
-            provider: 'DeepSeek',
-            description: '最新深度学习模型',
-            category: 'chinese',
-        },
-        {
-            id: 'deepseek/deepseek-r1',
-            name: 'DeepSeek R1',
-            provider: 'DeepSeek',
-            description: '推理增强模型',
-            category: 'chinese',
-        },
-        {
-            id: 'qwen/qwen3-max',
-            name: 'Qwen3 Max',
-            provider: 'Alibaba',
-            description: '通义千问最新旗舰模型',
-            category: 'chinese',
-        },
-        {
-            id: 'qwen/qwen-2.5-72b-instruct',
-            name: 'Qwen 2.5 72B',
-            provider: 'Alibaba',
-            description: '通义千问大规模模型',
-            category: 'chinese',
-        },
-        {
-            id: 'z-ai/glm-4.6',
-            name: 'GLM-4.6',
-            provider: '智谱AI',
-            description: '智谱最新旗舰模型',
-            category: 'chinese',
-        },
-        {
-            id: 'moonshotai/kimi-k2',
-            name: 'Kimi K2',
-            provider: 'Moonshot',
-            description: 'Kimi 最新模型',
-            category: 'chinese',
-        },
-        {
-            id: 'moonshotai/moonshot-v1-128k',
-            name: 'Moonshot V1 128K',
-            provider: 'Moonshot (Kimi)',
-            description: '长上下文模型',
-            category: 'chinese',
-        },
+    // 中国模型
+    {
+      id: 'doubao-seed-1-6-251015',
+      name: '豆包 1.6',
+      provider: '字节跳动',
+      description: '豆包最新模型（火山引擎）',
+      category: 'chinese',
+    },
+    {
+      id: 'deepseek/deepseek-v3.2',
+      name: 'DeepSeek V3.2',
+      provider: 'DeepSeek',
+      description: '最新深度学习模型',
+      category: 'chinese',
+    },
+    {
+      id: 'deepseek/deepseek-chat-v3.1',
+      name: 'DeepSeek V3.1',
+      provider: 'DeepSeek',
+      description: '稳定版深度学习模型',
+      category: 'chinese',
+    },
+    {
+      id: 'qwen/qwen3-max',
+      name: 'Qwen3 Max',
+      provider: 'Alibaba',
+      description: '通义千问最新旗舰模型',
+      category: 'chinese',
+    },
+    {
+      id: 'qwen/qwen3-coder-plus',
+      name: 'Qwen3 Coder Plus',
+      provider: 'Alibaba',
+      description: '通义千问代码增强版',
+      category: 'chinese',
+    },
+    {
+      id: 'z-ai/glm-4.6',
+      name: 'GLM-4.6',
+      provider: '智谱AI',
+      description: '智谱最新旗舰模型',
+      category: 'chinese',
+    },
+    {
+      id: 'z-ai/glm-4.5v',
+      name: 'GLM-4.5V',
+      provider: '智谱AI',
+      description: '智谱多模态模型',
+      category: 'chinese',
+    },
+    {
+      id: 'moonshotai/kimi-k2-0905',
+      name: 'Kimi K2',
+      provider: 'Moonshot',
+      description: 'Kimi 最新模型',
+      category: 'chinese',
+    },
+    {
+      id: 'moonshotai/kimi-k2-thinking',
+      name: 'Kimi K2 Thinking',
+      provider: 'Moonshot',
+      description: 'Kimi 思维链模型',
+      category: 'chinese',
+    },
         // 推荐模型
         {
             id: 'google/gemini-flash-1.5',

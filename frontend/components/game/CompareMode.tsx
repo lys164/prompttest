@@ -34,13 +34,14 @@ const MODEL_OPTIONS = [
     {
         group: '🇨🇳 中国模型', options: [
             { value: 'doubao-seed-1-6-251015', label: '豆包 1.6 (字节)' },
-            { value: 'deepseek/deepseek-chat-v3-0324', label: 'DeepSeek V3' },
-            { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+            { value: 'deepseek/deepseek-v3.2', label: 'DeepSeek V3.2' },
+            { value: 'deepseek/deepseek-chat-v3.1', label: 'DeepSeek V3.1' },
             { value: 'qwen/qwen3-max', label: 'Qwen3 Max' },
-            { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' },
+            { value: 'qwen/qwen3-coder-plus', label: 'Qwen3 Coder Plus' },
             { value: 'z-ai/glm-4.6', label: 'GLM-4.6 (智谱)' },
-            { value: 'moonshotai/kimi-k2', label: 'Kimi K2' },
-            { value: 'moonshotai/moonshot-v1-128k', label: 'Moonshot V1 128K' },
+            { value: 'z-ai/glm-4.5v', label: 'GLM-4.5V (智谱)' },
+            { value: 'moonshotai/kimi-k2-0905', label: 'Kimi K2' },
+            { value: 'moonshotai/kimi-k2-thinking', label: 'Kimi K2 Thinking' },
         ]
     },
     {
